@@ -37,7 +37,8 @@
 ;; #+END_QUOTE
 ;;
 ;; Generate documentation for Emacs Lisp package by extracting text
-;; from comments of =.el= files, organizing output into =.org= file.
+;; from comments of =.el= files and organizing them into single =.org=
+;; file.
 ;;
 ;; Idea is similiar to https://github.com/tumashu/el2org
 ;;
@@ -179,9 +180,13 @@ Return newtext or nil."
   (save-excursion
     (goto-char (point-min))
     (while (re-search-forward ">>>\\([a-zA-Z0-9-]+\\)\s*\\([^<]*\\)<<<" nil t)
-      (when-let ((newtext (ellit-org-apply-template
-                           (match-string 1) (match-string 2))))
-        (replace-match newtext)))))
+      (let* ((beg (match-beginning 0))
+             (end (match-end 0))
+             (template-name (match-string 1))
+             (template-arg (match-string 2))
+             (new-text (ellit-org-apply-template template-name template-arg)))
+        (when new-text
+          (replace-region-contents beg end (lambda () new-text)))))))
 
 (defun ellit-org-extract-comments ()
   "Extract comments from current buffer."
@@ -237,16 +242,20 @@ Write to OUTPUT-ORG-FILE, or return as string."
   (eval (read form)))
 
 (defun ellit-org-template-key1 (arg)
-  "Insert keybinding for the command."
-  ;;; Resembles magit manual
+  "Insert keybinding for the command. NOTYET DONE
+ARG is either form:
+  1) \"<command>\"  - lookup for <command> in `global-map'
+  2) \"<keymap>:<command>\" - lookup for <command> in <keymap>
+"
+  ;;; Resemble magit manual, i.e.
   ;;; - Key: C-c 1, C-c 2, ~command-fun~
   ;;;
   ;;;      Documentary for the <command-fun>.
   )
 
 (defun ellit-org-template-key2 (arg)
-  "Insert keybinding for the command."
-  ;;; Resembles org manual
+  "Insert keybinding for the command. NOTYET DONE"
+  ;;; Resemble org manual, i.e.
   ;;; - {{{kbd(C-c 1)}}}, {{{kbd(C-c 2)}}} (~command-fun~) ::
   ;;;
   ;;;      #+kindex: C-c C-f
