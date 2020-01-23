@@ -28,6 +28,7 @@
 ;; #+TITLE: ellit-org
 ;; #+STARTUP: showall
 ;;
+;; [[file:ellit-org-logo.svg]]
 ;; Emacs Lisp Literate programming tool
 ;;
 ;; #+BEGIN_QUOTE
@@ -96,6 +97,7 @@
 
 ;;; Code:
 (require 'subr-x)                       ;replace-region-contents
+(require 'svg)                          ;for `ellit-org--logo-image'
 
 (defvar ellit-org-start-regexp
   (rx (and (1+ space)
@@ -235,7 +237,52 @@ CUSTOM-TEMPLATE-ALIST are prepended to `ellit-org-template-alist'."
                         nil 'quiet)
         (buffer-string)))))
 
+;; See discussion about logo - https://t.me/emacs_en/10417
+(defun ellit-org--logo-image (&optional size)
+  "Generate logo for the `ellit-org'."
+  (unless size (setq size 256))
+  (let* ((logo-svg (svg-create size size))
+         (border-size (/ size 32))
+         (bracket-h (/ size 4))
+         (bracket-w (/ (- size (* border-size 6)) 6)))
+    (svg-gradient logo-svg "cgrad1" 'linear
+                  (list '(0 . "#8280c2") (cons size "#9146bc")))
+    (svg-circle logo-svg (/ size 2) (/ size 2) (- (/ size 2) border-size)
+                :stroke-width border-size
+                :stroke-color "#592a80"
+                :gradient "cgrad1")
+    ;; Draw brackets
+    (dotimes (n 6)
+      (let* ((x-off (+ (* border-size 6) (* n (/ bracket-w 1.75))))
+             (b-x x-off)
+             (m-x (+ x-off bracket-w)))
+        ;; NOTE: swap `b-x' and `m-x' after third bracket
+        (when (> n 2)
+          (setq b-x (prog1 m-x (setq m-x b-x)))
+          (setq b-x (+ b-x (/ bracket-w 1.25)))
+          (setq m-x (+ m-x (/ bracket-w 1.25))))
+
+        (svg-polyline logo-svg (list (cons b-x (- (/ size 2) bracket-h))
+                                     (cons m-x (/ size 2))
+                                     (cons b-x (+ (/ size 2) bracket-h)))
+                      :stroke-width (* border-size 1.5)
+                      :stroke-color "white"
+                      :fill "none")))
+
+    (svg-image logo-svg :scale 1.0
+               :width size :height size
+               :ascent 'center)))
+
+(defun ellit-org--save-logo (file &optional size)
+  "Write ellit svg logo into FILE."
+  (let ((logo-image (ellit-org--logo-image size)))
+    (write-region "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" nil
+                  file nil 'quiet)
+    (write-region (plist-get (cdr logo-image) :data) nil
+                  file 'append 'quiet)))
+
 
+;;; Templates
 (defun ellit-org-template-ellit (file)
   "Insert results of the FILE processing."
   ;;; NOTE: remove trailing \n, to not insert double newline for

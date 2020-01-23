@@ -1,6 +1,7 @@
 #+TITLE: ellit-org
 #+STARTUP: showall
 
+[[file:ellit-org-logo.svg]]
 Emacs Lisp Literate programming tool
 
 #+BEGIN_QUOTE
@@ -99,3 +100,4 @@ Supported templates:
   Insert first line from docstring for the FUNCTION.
 - FUNDOC <function> ::
   Insert full docstring for the FUNCTION.
+See discussion about logo - https://t.me/emacs_en/10417
