@@ -238,7 +238,12 @@ CUSTOM-TEMPLATE-ALIST are prepended to `ellit-org-template-alist'."
 
 (defun ellit-org-template-ellit (file)
   "Insert results of the FILE processing."
-  (ellit-org-file file))
+  ;;; NOTE: remove trailing \n, to not insert double newline for
+  ;;; >>>ELLIT file<<<
+  (let ((output (ellit-org-file file)))
+    (if (string-suffix-p "\n" output)
+        (substring output 0 -1)
+      output)))
 
 (defun ellit-org-template-elfile (_ignored)
   "Insert currently processing filename."
