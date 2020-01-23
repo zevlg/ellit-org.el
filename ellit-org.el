@@ -95,6 +95,8 @@
 
 
 ;;; Code:
+(require 'subr-x)                       ;replace-region-contents
+
 (defvar ellit-org-start-regexp
   (rx (and (1+ space)
            (or "#+"
@@ -163,10 +165,11 @@ TEMPLATE-FUNC is called with single string(or nil) argument.")
 
 (defvar ellit-org-directory nil
   "Bind this var to the current ellit-doc directory.
-Used to lookup files in >>>ELLIT<<< template chunks.")
+Used to lookup file in >>>ELLIT file.el<<< template.")
 
 (defvar ellit-org-elfile nil
-  "Filename of the currently processing file.")
+  "Currently processing filename.
+Used to expand >>>ELFILE<<< template.")
 
 (defun ellit-org-apply-template (name &optional arg)
   "Return value for the template chunk with NAME.
@@ -213,11 +216,16 @@ Return newtext or nil."
         (delete-region (point-at-bol) (point-at-eol)))
       (delete-region cpont (point-max)))))
 
-(defun ellit-org-file (el-file &optional output-org-file)
+(defun ellit-org-file (el-file &optional output-org-file custom-template-alist)
   "Extract documentation from EL-FILE.
-Write to OUTPUT-ORG-FILE, or return as string."
+Write to OUTPUT-ORG-FILE, or return as string.
+CUSTOM-TEMPLATE-ALIST specifies custom templates to use in EL-FILE processing.
+CUSTOM-TEMPLATE-ALIST are prepended to `ellit-org-template-alist'."
   (let* ((ellit-org-elfile (expand-file-name el-file ellit-org-directory))
-         (ellit-org-directory (file-name-directory ellit-org-elfile)))
+         (ellit-org-directory (file-name-directory ellit-org-elfile))
+         (ellit-org-template-alist
+          (nconc (copy-sequence custom-template-alist)
+                 ellit-org-template-alist)))
     (with-temp-buffer
       (insert-file-contents ellit-org-elfile)
       (ellit-org-extract-comments)
@@ -225,8 +233,7 @@ Write to OUTPUT-ORG-FILE, or return as string."
       (if output-org-file
           (write-region (point-min) (point-max) output-org-file
                         nil 'quiet)
-        (buffer-string)))
-    ))
+        (buffer-string)))))
 
 
 (defun ellit-org-template-ellit (file)
