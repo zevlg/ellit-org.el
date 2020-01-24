@@ -93,35 +93,43 @@
 ;;                                        <--- processing stops here
 ;;   ;; This line is *not* included
 ;; #+end_src
+;;
 
 
 ;;; Code:
 (require 'subr-x)                       ;replace-region-contents
 (require 'svg)                          ;for `ellit-org--logo-image'
 
+(defvar ellit-org-comment-start-regexp
+  (rx (0+ (regexp "\s")) ";;"
+      (or (regexp "\s") eol)))
+
 (defvar ellit-org-start-regexp
-  (rx (and (1+ space)
-           (or "#+"
-               (and (or (1+ "*") "+" "-"
-                        (and (1+ digit) (or "." ")")))
-                    space))))
+  (rx ";;" (1+ space) (or "#+"
+                          (and (or (1+ "*") "+" "-"
+                                   (and (1+ digit) (or "." ")")))
+                               space)))
   "Regexp matching start of the text to extract.")
 
-;; * Templating
+(defvar ellit-org-template-regexp
+  ">>>\\([a-zA-Z0-9-]+\\)\s*\\([^<]*\\)<<<"
+  "Regexp for the template syntax.")
 
+;; * Templating
+;;
 ;; ellit-org includes very simple templating system to automatically
 ;; extract useful bits from source code or from Emacs runtime.
-
+;;
 ;; Templates substitution is done *after* processing comments, so make
 ;; sure your templates are in processed part of the comments.
-
+;;
 ;; Templates syntax:
 ;; #+begin_example
 ;; >>>TEMPLATE_NAME ARGUMENTS<<<
 ;; #+end_example
 ;; ~ARGUMENTS~ are optional string supplied to function which does
 ;; processing for ~TEMPLATE_NAME~.
-
+;;
 ;; Supported templates:
 (defvar ellit-org-template-alist
   '(
@@ -184,7 +192,7 @@ Return newtext or nil."
   "Replace all template chunks in current buffer with their values."
   (save-excursion
     (goto-char (point-min))
-    (while (re-search-forward ">>>\\([a-zA-Z0-9-]+\\)\s*\\([^<]*\\)<<<" nil t)
+    (while (re-search-forward ellit-org-template-regexp nil t)
       (let* ((beg (match-beginning 0))
              (end (match-end 0))
              (template-name (match-string 1))
@@ -197,15 +205,14 @@ Return newtext or nil."
   "Extract comments from current buffer."
   (save-excursion
     (goto-char (point-min))
-    (let ((comment-start-regexp (rx (and (0+ space) ";;" (or space eol))))
-          cpont)
+    (let (cpont)
       (while (progn (setq cpont (point))
                     (re-search-forward ellit-org-start-regexp nil 'no-error))
         (beginning-of-line)
         (delete-region cpont (point))
 
-        ;; Scan line by line
-        (while (looking-at comment-start-regexp)
+        ;; Scan line by line, stopping at non-commentary string
+        (while (looking-at ellit-org-comment-start-regexp)
           (let ((del-point (match-end 0))
                 (eol-point (point-at-eol)))
             ;; DO NOT strip "\n"
@@ -216,6 +223,7 @@ Return newtext or nil."
           (forward-line 1)
           (beginning-of-line))
         (delete-region (point-at-bol) (point-at-eol)))
+
       (delete-region cpont (point-max)))))
 
 (defun ellit-org-file (el-file &optional output-org-file custom-template-alist)

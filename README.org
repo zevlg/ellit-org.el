@@ -66,6 +66,7 @@ Here is the example:
                                        <--- processing stops here
   ;; This line is *not* included
 #+end_src
+
 * Templating
 
 ellit-org includes very simple templating system to automatically
@@ -100,4 +101,3 @@ Supported templates:
   Insert first line from docstring for the FUNCTION.
 - FUNDOC <function> ::
   Insert full docstring for the FUNCTION.
-See discussion about logo - https://t.me/emacs_en/10417

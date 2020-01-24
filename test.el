@@ -58,6 +58,45 @@ And here still processing
 ")
   )
 
+(ert-deftest ellit-org--comments-non-comment-stops ()
+  "Test that non-comment line stops processing."
+  (ellit-org--should "
+;; #+title: included1
+
+;; Not included
+;; 
+;; * Included2
+;; Also included
+(code here)
+;; Not icluded
+"
+                     "
+#+title: included1
+* Included2
+Also included
+")
+  )
+
+(ert-deftest ellit-org--comments-heading-in-the-middle ()
+  "Test property/heading/list occurs in the middle of comment line."
+  (ellit-org--should "
+;; #+title: this line is included
+;; Processing continues
+ 
+;; This line should - not be included
+;; - This is included
+
+;; This is * not * included
+
+;; This line #+either should not be included
+"
+                     "
+#+title: this line is included
+Processing continues
+- This is included
+")
+  )
+
 (ert-deftest ellit-org--template-ellit ()
   "Test >>>ELLIT<<< template is working well."
   (let ((el-file2 (make-temp-file "el-file2.el")))
