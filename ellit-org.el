@@ -25,10 +25,8 @@
 
 ;;; Commentary:
 
-;; #+TITLE: ellit-org
-;; #+STARTUP: showall
-;;
-;; [[file:ellit-org-logo.svg]]
+;; #+TITLE: [[file:ellit-org-logo.svg]] ellit-org
+;; 
 ;; Emacs Lisp Literate programming tool
 ;;
 ;; #+BEGIN_QUOTE
@@ -42,9 +40,6 @@
 ;; file.
 ;;
 ;; Idea is similiar to https://github.com/tumashu/el2org
-;;
-;; However =ellit-org= includes simple templating system, which is nice
-;; to have thing in documentation generator tool.
 ;;
 ;; * Why?
 ;;
@@ -103,7 +98,8 @@
 
 
 ;;; Code:
-(require 'subr-x)                       ;replace-region-contents
+(require 'subr-x)                       ;`replace-region-contents'
+(require 'org)                          ;`org-macro-replace-all'
 (require 'svg)                          ;for `ellit-org--logo-image'
 
 (defconst ellit-org-comment-start-regexp
@@ -130,92 +126,72 @@
 
 ;; * Templating
 ;;
-;; ellit-org includes very simple templating system to automatically
-;; extract useful bits from source code or from Emacs runtime.
+;; ellit-org relies on Org mode's macro system by adding some useful
+;; macroses.  See https://orgmode.org/manual/Macro-replacement.html
 ;;
-;; Templates substitution is done *after* processing comments, so make
-;; sure your templates are in processed part of the comments.
+;; Macro replacement is done *after* processing comments, so make
+;; sure your macroses are in processed part of the comments.
 ;;
 ;; Templates syntax:
 ;; #+begin_example
-;; >>>TEMPLATE_NAME ARGUMENTS<<<
+;; {{{macro_name(arguments)}}}
 ;; #+end_example
 ;; ~ARGUMENTS~ are optional string supplied to function which does
-;; processing for ~TEMPLATE_NAME~.
+;; processing for ~MACRO_NAME~.
 ;;
 ;; Supported templates:
+
 (defvar ellit-org-template-alist
   '(
-    ;; - ELLIT <file> ::
-    ;;   >>>FUNDOC1 ellit-org-template-ellit<<<
-    ("ELLIT" . ellit-org-template-ellit)
+    ;; - ellit(<file>) ::
+    ;;   {{{fundoc1(ellit-org-template-ellit)}}}
+    ("ellit" . "(eval (ellit-org-template-ellit $1))")
 
-    ;; - ELFILE ::
-    ;;   >>>FUNDOC1 ellit-org-template-elfile<<<
-    ("ELFILE" . ellit-org-template-elfile)
+    ;; - elfile() ::
+    ;;   {{{fundoc1(ellit-org-template-elfile)}}}
+    ("elfile" . "(eval (ellit-org-template-elfile))")
 
-    ;; - EVAL <form> ::
-    ;;   >>>FUNDOC1 ellit-org-template-eval<<<
-    ("EVAL" . ellit-org-template-eval)
+    ;; - kbd(<key>) ::
+    ;;   {{{fundoc1(ellit-org-template-kbd)}}}
+    ("kbd" . "(eval (ellit-org-template-kbd $1))")
 
-    ;; - KEY-V1 [<keymap>:]<command> ::
-    ;;   >>>FUNDOC1 ellit-org-template-key1<<<
-    ("KEY-V1" . ellit-org-template-key1)
+    ;; - cmd-v1(<command>,<keymap>) ::
+    ;;   {{{fundoc1(ellit-org-template-cmd-v1)}}}
+    ("cmd-v1" . "(eval (ellit-org-template-cmd-v1 $1 $2))")
 
-    ;; - KEY-V2 [<keymap>:]<command> ::
-    ;;   >>>FUNDOC1 ellit-org-template-key2<<<
-    ("KEY-V2" . ellit-org-template-key2)
+    ;; - cmd-v2(<command>,<keymap>) ::
+    ;;   {{{fundoc1(ellit-org-template-cmd-v2)}}}
+    ("cmd-v2" . "(eval (ellit-org-template-cmd-v2 $1 $2))")
 
-    ;; - VARDOC1 <variable> ::
-    ;;   >>>FUNDOC1 ellit-org-template-vardoc1<<<
-    ("VARDOC1" . ellit-org-template-vardoc1)
+    ;; - vardoc1(<variable>) ::
+    ;;   {{{fundoc1(ellit-org-template-vardoc1)}}}
+    ("vardoc1" . "(eval (ellit-org-template-vardoc1 $1))")
 
-    ;; - VARDOC <variable> ::
-    ;;   >>>FUNDOC1 ellit-org-template-vardoc<<<
-    ("VARDOC" . ellit-org-template-vardoc)
+    ;; - vardoc(<variable>) ::
+    ;;   {{{fundoc1(ellit-org-template-vardoc)}}}
+    ("vardoc" . "(eval (ellit-org-template-vardoc $1))")
 
-    ;; - FUNDOC1 <function> ::
-    ;;   >>>FUNDOC1 ellit-org-template-fundoc1<<<
-    ("FUNDOC1" . ellit-org-template-fundoc1)
+    ;; - fundoc1(<function>) ::
+    ;;   {{{fundoc1(ellit-org-template-fundoc1)}}}
+    ("fundoc1" . "(eval (ellit-org-template-fundoc1 $1))")
 
-    ;; - FUNDOC <function> ::
-    ;;   >>>FUNDOC1 ellit-org-template-fundoc<<<
-    ("FUNDOC" . ellit-org-template-fundoc))
-  "Alist of available templates.
+    ;; - fundoc(<function>) ::
+    ;;   {{{fundoc1(ellit-org-template-fundoc)}}}
+    ("fundoc" . "(eval (ellit-org-template-fundoc $1))")
+    )
+  "Alist of org macro templates.
 Each element in form:
-  (TEMPLATE-NAME . TEMPLATE-FUNC)
-TEMPLATE-FUNC is called with single string(or nil) argument.")
+  (NAME . TEMPLATE)
+
+See `org-macro-templates'.")
 
 (defvar ellit-org-directory nil
   "Bind this var to the current ellit-doc directory.
-Used to lookup file in >>>ELLIT file.el<<< template.")
+Used to lookup file in `ellit' macro expansion.")
 
 (defvar ellit-org-elfile nil
   "Currently processing filename.
-Used to expand >>>ELFILE<<< template.")
-
-(defun ellit-org-apply-template (name &optional arg)
-  "Return value for the template chunk with NAME.
-Optional string ARG could be given.
-Return newtext or nil."
-  (if-let ((template (assoc name ellit-org-template-alist)))
-      (funcall (cdr template) arg)
-    (when ellit-org-template-unknown-warn
-      (display-warning
-       'ellit-org (format "Unknown template: %s" name) :warning))))
-
-(defun ellit-org-apply-all-templates ()
-  "Replace all template chunks in current buffer with their values."
-  (save-excursion
-    (goto-char (point-min))
-    (while (re-search-forward ellit-org-template-regexp nil t)
-      (let* ((beg (match-beginning 0))
-             (end (match-end 0))
-             (template-name (match-string 1))
-             (template-arg (match-string 2))
-             (new-text (ellit-org-apply-template template-name template-arg)))
-        (when new-text
-          (replace-region-contents beg end (lambda () new-text)))))))
+Used in `elfile' macro expansion.")
 
 (defun ellit-org-extract-comments ()
   "Extract comments from current buffer."
@@ -242,20 +218,37 @@ Return newtext or nil."
 
       (delete-region cpont (point-max)))))
 
-(defun ellit-org-file (el-file &optional output-org-file custom-template-alist)
+(defun ellit-org-macro-replace-all (&optional macro-templates)
+  "Replace all macros in current buffer by their expansion.
+MACRO-TEMPLATES - list of additional macro definitions."
+  ;; NOTE: set `org-complex-heading-regexp' to string, otherwise
+  ;; `org-macro-replace-all' fails.
+  ;; `org-complex-heading-regexp' only used to recognize
+  ;; commented/non-commented headings.
+  (let ((org-complex-heading-regexp ""))
+    (org-macro-initialize-templates)
+    (let ((templates (nconc org-macro-templates
+                            (copy-sequence macro-templates)
+                            ellit-org-macro-templates)))
+      (org-macro-replace-all templates))))
+
+(defun ellit-org-file (el-file &optional output-org-file)
   "Extract documentation from EL-FILE.
 Write to OUTPUT-ORG-FILE, or return as string.
-CUSTOM-TEMPLATE-ALIST specifies custom templates to use in EL-FILE processing.
-CUSTOM-TEMPLATE-ALIST are prepended to `ellit-org-template-alist'."
+TEMPLATE-ALIST specifies custom templates to use in EL-FILE processing.
+TEMPLATE-ALIST are prepended to `ellit-org-template-alist'.
+If MACRO-REPLACE is non-nil, then execute `org-macro-replace-all'
+on final org file."
   (let* ((ellit-org-elfile (expand-file-name el-file ellit-org-directory))
          (ellit-org-directory (file-name-directory ellit-org-elfile))
          (ellit-org-template-alist
-          (nconc (copy-sequence custom-template-alist)
+          (nconc (copy-sequence template-alist)
                  ellit-org-template-alist)))
     (with-temp-buffer
       (insert-file-contents ellit-org-elfile)
       (ellit-org-extract-comments)
-      (ellit-org-apply-all-templates)
+      (ellit-org-macro-replace-all template-alist)
+
       (if output-org-file
           (write-region (point-min) (point-max) output-org-file
                         nil 'quiet)
@@ -310,7 +303,7 @@ CUSTOM-TEMPLATE-ALIST are prepended to `ellit-org-template-alist'."
 (defun ellit-org-template-ellit (file)
   "Insert results of the FILE processing."
   ;; NOTE: remove trailing \n, to not insert double newline for
-  ;; >>>ELLIT file<<<
+  ;; {{{ellit(file)}}} macro
   (let ((output (ellit-org-file file)))
     (if (string-suffix-p "\n" output)
         (substring output 0 -1)
@@ -320,24 +313,28 @@ CUSTOM-TEMPLATE-ALIST are prepended to `ellit-org-template-alist'."
   "Insert currently processing filename."
   (file-name-nondirectory ellit-org-elfile))
 
-(defun ellit-org-template-eval (form)
-  "Insert result of the FORM evaluation."
-  (eval (read form)))
+(defun ellit-org-template-kbd (key)
+  "Insert HTML <kbd> tag with KEY contents."
+  (concat "@@html:<kbd>@@" key "@@html:</kbd>@@"))
+
+(defun ellit-org--command-keys (command &optional keymap)
+  "Return list of keys to run COMMAND."
+  )
 
 (defun ellit-org-template-key1 (arg)
-  "Insert keybinding for the command. NOTYET DONE
-ARG is either form:
-  1) \"<command>\"  - lookup for <command> in `global-map'
-  2) \"<keymap>:<command>\" - lookup for <command> in <keymap>
-"
+  "Insert description for the COMMAND, resembling Magit manual.
+KEYMAP is keymap where to lookup for COMMAND.  By default
+`global-map' is considered."
   ;; Resemble magit manual, i.e.
   ;; - Key: C-c 1, C-c 2, ~command-fun~
   ;;
   ;;      Documentary for the <command-fun>.
   )
 
-(defun ellit-org-template-key2 (arg)
-  "Insert keybinding for the command. NOTYET DONE"
+(defun ellit-org-template-cmd-v2 (command &optional keymap)
+  "Insert description for the COMMAND, resembling Org mode manual.
+KEYMAP is keymap where to lookup for COMMAND.  By default
+`global-map' is considered."
   ;; Resemble org manual, i.e.
   ;; - {{{kbd(C-c 1)}}}, {{{kbd(C-c 2)}}} (~command-fun~) ::
   ;;
