@@ -11,13 +11,75 @@ CUSTOM-TEMPLATE-ALIST is passed directly to `ellit-org-file'."
       (delete-file el-file))))
 
 (defun ellit-org--should (content should-content &optional custom-template-alist)
+  "Same as `should', but takes into account `ellit-org' specifics."
+  (when (string-prefix-p "\n" content)
+    (setq content (substring content 1)))
+  (when (string-prefix-p "\n" should-content)
+    (setq should-content (substring should-content 1)))
+
   (should (equal (ellit-org-file--on-str content custom-template-alist)
-                 (if (string-prefix-p "\n" should-content)
-                     (substring should-content 1)
-                   should-content))))
+                 should-content)))
 
 
 ;; Tests
+(ert-deftest ellit-org--comments-starting ()
+  "Test processing starting point."
+  ;; See "* Commenting .el files" section
+  (ellit-org--should "
+;; * This starts processing, buffer-start
+;; Processing continues
+"
+                     "
+* This starts processing, buffer-start
+Processing continues
+")
+  (ellit-org--should "
+
+;; * This also starts processing, empty line after buffer-start
+;; Processing continues
+"
+                     "
+* This also starts processing, empty line after buffer-start
+Processing continues
+")
+
+  ;; Heading in the middle of the commentary block
+  (ellit-org--should "
+;; * This starts processing, 1line
+;; Processing continues
+<--- stops processing here
+;; New not matching commentary block
+;; * Heading in the middle
+;; - List in the middle
+;; 1) Another list
+;; 
+;; * Second section
+
+;; * New heading starting commentary block
+"
+                     "
+* This starts processing, 1line
+Processing continues
+* New heading starting commentary block
+")
+
+  (ellit-org--should "
+;; #+title: included1
+
+;; Not included
+
+;; * Included2
+;; Also included
+(code here)
+;; Not icluded
+"
+                     "
+#+title: included1
+* Included2
+Also included
+")
+  )
+
 (ert-deftest ellit-org--comments-leading-trailing-strips ()
   "Test leading/trailing part of the file is trimmed."
   (ellit-org--should "
@@ -26,7 +88,8 @@ leading line2
 ;; #+title: processing starts here
 ;; Processing continues
 Processing stops here
-This is not processed"
+This is not processed
+"
                      "
 #+title: processing starts here
 Processing continues
@@ -41,11 +104,12 @@ Processing continues
 ;; Processing continues
 ;; 
 ;; Still continue processing
-Processing stops here
+<------- Processing stops here
 ;; - And continues here
 ;; 
 ;; And here still processing
-stop here"
+stop here
+"
                      "
 #+title: processing starts here
 
@@ -64,7 +128,7 @@ And here still processing
 ;; #+title: included1
 
 ;; Not included
-;; 
+
 ;; * Included2
 ;; Also included
 (code here)
@@ -84,7 +148,7 @@ Also included
 ;; Processing continues
  
 ;; This line should - not be included
-;; - This is included
+;; - This line is ALSO NOT included
 
 ;; This is * not * included
 
@@ -93,7 +157,6 @@ Also included
                      "
 #+title: this line is included
 Processing continues
-- This is included
 ")
   )
 
@@ -133,7 +196,8 @@ String from el-file1
 File
 ;; * Testing heading
 ;; >>>MYCUSTOM<<<
-Done"
+Done
+"
                        "
 * Testing heading
 Looks like working

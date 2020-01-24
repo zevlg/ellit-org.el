@@ -46,9 +46,11 @@ manual.org: srcfile.el <list-of-other-files-used-to-generate-manual>
 
 * Commenting .el files
 
-- Use double-semicolon comments, otherwise processing won't start
-- Processing starts when Org mode's property, heading or list is seen
-- Processing stops on any non-commentary string
+1. Use double-semicolon comments, otherwise processing won't start
+2. Processing starts when Org mode's property, heading or list is seen
+3. Processing starts only if matched comment line begins commentary
+   block, i.e. previous line is a non-commentary line
+4. Processing stops on any non-commentary line
 
 Here is the example:
 #+begin_src emacs-lisp
@@ -57,7 +59,9 @@ Here is the example:
   ;;
   ;; This line also included into output
                                        <--- processing stops here
-  ;; This line is *not* included into output
+  ;; This line is NOT included into output
+  ;; * This line also NOT included
+  ;;   Since it does not begin the commentary block, see 3.
 
   ;; - However this line, is included  <--- processing starts here
   ;;

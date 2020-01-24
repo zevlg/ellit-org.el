@@ -73,9 +73,11 @@
 ;;
 ;; * Commenting .el files
 ;;
-;; - Use double-semicolon comments, otherwise processing won't start
-;; - Processing starts when Org mode's property, heading or list is seen
-;; - Processing stops on any non-commentary string
+;; 1. Use double-semicolon comments, otherwise processing won't start
+;; 2. Processing starts when Org mode's property, heading or list is seen
+;; 3. Processing starts only if matched comment line begins commentary
+;;    block, i.e. previous line is a non-commentary line
+;; 4. Processing stops on any non-commentary line
 ;;
 ;; Here is the example:
 ;; #+begin_src emacs-lisp
@@ -84,7 +86,9 @@
 ;;   ;;
 ;;   ;; This line also included into output
 ;;                                        <--- processing stops here
-;;   ;; This line is *not* included into output
+;;   ;; This line is NOT included into output
+;;   ;; * This line also NOT included
+;;   ;;   Since it does not begin the commentary block, see 3.
 ;;
 ;;   ;; - However this line, is included  <--- processing starts here
 ;;   ;;
@@ -100,15 +104,19 @@
 (require 'subr-x)                       ;replace-region-contents
 (require 'svg)                          ;for `ellit-org--logo-image'
 
-(defvar ellit-org-comment-start-regexp
+(defconst ellit-org-comment-start-regexp
   (rx (0+ (regexp "\s")) ";;"
       (or (regexp "\s") eol)))
 
 (defvar ellit-org-start-regexp
-  (rx ";;" (1+ space) (or "#+"
-                          (and (or (1+ "*") "+" "-"
-                                   (and (1+ digit) (or "." ")")))
-                               space)))
+  (rx (or buffer-start
+          (and line-start (0+ (not ";")) "\n"))
+
+      line-start (0+ (regexp "\s")) ";;" (1+ space)
+      (or "#+"
+          (and (or (1+ "*") "+" "-"
+                   (and (1+ digit) (or "." ")")))
+               space)))
   "Regexp matching start of the text to extract.")
 
 (defvar ellit-org-template-regexp
@@ -293,8 +301,8 @@ CUSTOM-TEMPLATE-ALIST are prepended to `ellit-org-template-alist'."
 ;;; Templates
 (defun ellit-org-template-ellit (file)
   "Insert results of the FILE processing."
-  ;;; NOTE: remove trailing \n, to not insert double newline for
-  ;;; >>>ELLIT file<<<
+  ;; NOTE: remove trailing \n, to not insert double newline for
+  ;; >>>ELLIT file<<<
   (let ((output (ellit-org-file file)))
     (if (string-suffix-p "\n" output)
         (substring output 0 -1)
@@ -314,20 +322,20 @@ ARG is either form:
   1) \"<command>\"  - lookup for <command> in `global-map'
   2) \"<keymap>:<command>\" - lookup for <command> in <keymap>
 "
-  ;;; Resemble magit manual, i.e.
-  ;;; - Key: C-c 1, C-c 2, ~command-fun~
-  ;;;
-  ;;;      Documentary for the <command-fun>.
+  ;; Resemble magit manual, i.e.
+  ;; - Key: C-c 1, C-c 2, ~command-fun~
+  ;;
+  ;;      Documentary for the <command-fun>.
   )
 
 (defun ellit-org-template-key2 (arg)
   "Insert keybinding for the command. NOTYET DONE"
-  ;;; Resemble org manual, i.e.
-  ;;; - {{{kbd(C-c 1)}}}, {{{kbd(C-c 2)}}} (~command-fun~) ::
-  ;;;
-  ;;;      #+kindex: C-c C-f
-  ;;;      #+findex: command-fun
-  ;;;      Documentary for the <command-fun>.
+  ;; Resemble org manual, i.e.
+  ;; - {{{kbd(C-c 1)}}}, {{{kbd(C-c 2)}}} (~command-fun~) ::
+  ;;
+  ;;      #+kindex: C-c C-f
+  ;;      #+findex: command-fun
+  ;;      Documentary for the <command-fun>.
   )
 
 (defun ellit-org--vardoc (varname &optional first-line-p)
