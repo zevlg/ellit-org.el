@@ -1,7 +1,5 @@
-#+TITLE: ellit-org
-#+STARTUP: showall
+#+TITLE: [[file:ellit-org-logo.svg]] ellit-org
 
-[[file:ellit-org-logo.svg]]
 Emacs Lisp Literate programming tool
 
 #+BEGIN_QUOTE
@@ -15,9 +13,6 @@ from comments of =.el= files and organizing them into single =.org=
 file.
 
 Idea is similiar to https://github.com/tumashu/el2org
-
-However =ellit-org= includes simple templating system, which is nice
-to have thing in documentation generator tool.
 
 * Why?
 
@@ -75,35 +70,35 @@ Here is the example:
 
 * Templating
 
-ellit-org includes very simple templating system to automatically
-extract useful bits from source code or from Emacs runtime.
+ellit-org relies on Org mode's macro system by adding some useful
+macroses.  See https://orgmode.org/manual/Macro-replacement.html
 
-Templates substitution is done *after* processing comments, so make
-sure your templates are in processed part of the comments.
+Macro replacement is done *after* processing comments, so make
+sure your macroses are in processed part of the comments.
 
 Templates syntax:
 #+begin_example
->>>TEMPLATE_NAME ARGUMENTS<<<
+{{{macro_name(arguments)}}}
 #+end_example
 ~ARGUMENTS~ are optional string supplied to function which does
-processing for ~TEMPLATE_NAME~.
+processing for ~MACRO_NAME~.
 
 Supported templates:
-- ELLIT <file> ::
+- as-is(<string>) ::
+  Insert STRING as is.
+- ellit(<file>) ::
   Insert results of the FILE processing.
-- ELFILE ::
+- elfile() ::
   Insert currently processing filename.
-- EVAL <form> ::
-  Insert result of the FORM evaluation.
-- KEY-V1 [<keymap>:]<command> ::
-  Insert keybinding for the command. NOTYET DONE
-- KEY-V2 [<keymap>:]<command> ::
-  Insert keybinding for the command. NOTYET DONE
-- VARDOC1 <variable> ::
+- kbd(<key>) ::
+  Insert HTML <kbd> tag with KEY contents.
+- where-is(<command>,<keymap>) ::
+  Insert list of keys that calls COMMAND.
+- vardoc1(<variable>) ::
   Insert first line from docstring for the VARIABLE.
-- VARDOC <variable> ::
+- vardoc(<variable>) ::
   Insert full docstring for the VARIABLE.
-- FUNDOC1 <function> ::
+- fundoc1(<function>) ::
   Insert first line from docstring for the FUNCTION.
-- FUNDOC <function> ::
+- fundoc(<function>) ::
   Insert full docstring for the FUNCTION.
