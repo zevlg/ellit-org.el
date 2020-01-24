@@ -71,7 +71,7 @@
 ;;                  --eval '(ellit-org-file "srcfile.el" "manual.org")'
 ;; #+END_SRC
 ;;
-;; See =ellit-org.el='s [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
+;; See =ellit-org='s [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
 ;; 
 ;; * Commenting .el files
 ;;
