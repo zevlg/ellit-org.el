@@ -71,6 +71,8 @@
 ;;                  --eval '(ellit-org-file "srcfile.el" "manual.org")'
 ;; #+END_SRC
 ;;
+;; See =ellit-org.el='s [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
+;; 
 ;; * Commenting .el files
 ;;
 ;; 1. Use double-semicolon comments, otherwise processing won't start
@@ -120,8 +122,11 @@
   "Regexp matching start of the text to extract.")
 
 (defvar ellit-org-template-regexp
-  ">>>\\([a-zA-Z0-9-]+\\)\s*\\([^<]*\\)<<<"
+  ">>>\\([a-zA-Z0-9-_]+\\)\s*\\([^<]*\\)<<<"
   "Regexp for the template syntax.")
+
+(defvar ellit-org-template-unknown-warn t
+  "Bind to nil to avoid warnings about unknown templates.")
 
 ;; * Templating
 ;;
@@ -193,8 +198,11 @@ Used to expand >>>ELFILE<<< template.")
   "Return value for the template chunk with NAME.
 Optional string ARG could be given.
 Return newtext or nil."
-  (when-let ((template (assoc name ellit-org-template-alist)))
-    (funcall (cdr template) arg)))
+  (if-let ((template (assoc name ellit-org-template-alist)))
+      (funcall (cdr template) arg)
+    (when ellit-org-template-unknown-warn
+      (display-warning
+       'ellit-org (format "Unknown template: %s" name) :warning))))
 
 (defun ellit-org-apply-all-templates ()
   "Replace all template chunks in current buffer with their values."

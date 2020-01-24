@@ -3,7 +3,7 @@ EMACS=emacs -Q
 all: compile ellit-org-logo.svg README.org
 
 README.org: ellit-org.el
-	$(EMACS) -batch -L . -l ellit-org --eval '(ellit-org-file "ellit-org.el" "README.org")'
+	$(EMACS) -batch -L . -l ellit-org --eval '(let ((ellit-org-template-unknown-warn nil)) (ellit-org-file "ellit-org.el" "README.org"))'
 
 compile: ellit-org.elc
 
