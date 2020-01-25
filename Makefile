@@ -15,7 +15,7 @@ test: test.el ellit-org.elc
 	$(EMACS_BATCH) -L . -l test -f ert-run-tests-batch-and-exit
 
 ellit-org-logo.svg: ellit-org.el
-	$(EMACS_BATCH) -L . -l ellit-org --eval '(ellit-org--save-logo "ellit-org-logo.svg" 64)'
+	$(EMACS_BATCH) -L . -l ellit-org --eval '(ellit-org--save-logo "ellit-org-logo.svg" 512)'
 
 clean:
 	@rm -vf ellit-org.elc

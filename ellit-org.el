@@ -25,7 +25,7 @@
 
 ;;; Commentary:
 
-;; #+TITLE: [[file:ellit-org-logo.svg]] ellit-org
+;; #+TITLE: [[ellit-org-logo64.png]] ellit-org
 ;;
 ;; Emacs Lisp Literate programming tool
 ;;
