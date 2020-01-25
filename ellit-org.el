@@ -218,7 +218,10 @@ Used in `ellit-filename' template.")
 
           (forward-line 1)
           (beginning-of-line))
-        (delete-region (point-at-bol) (point-at-eol)))
+        (delete-region (point-at-bol) (point-at-eol))
+
+        ;; NOTE: Separent processing hunks with newline
+        (insert "\n"))
 
       (delete-region cpont (point-max)))))
 
@@ -264,6 +267,7 @@ TEMPLATE-ALIST is used as alist of custom templates."
   (let* ((ellit-dir (when ellit-org--filename
                       (file-name-directory ellit-org--filename)))
          (ellit-org--filename (expand-file-name el-file ellit-dir)))
+    (load-file ellit-org--filename)
     (with-temp-buffer
       (insert-file-contents ellit-org--filename)
       (ellit-org--process-el)
@@ -357,12 +361,16 @@ TEMPLATE-ALIST is used as alist of custom templates."
 KEYMAP is keymap where to lookup for COMMAND.  By default
 `global-map' is considered."
   ;; {{{kbd(C-c 1)}}}, {{{kbd(C-c 2)}}} (~command~)
-  (concat (mapconcat (lambda (key)
-                       (ellit-org-template-kbd (key-description key)))
-                     (where-is-internal command keymap) ", ")
-          "(~" command "~)"
-          (ellit-org-template-fundoc command))
-  )
+  (let ((cmd-sym (intern command))
+        (keymap-sym (intern keymap)))
+    (concat (mapconcat (lambda (key)
+                         (ellit-org-template-kbd (key-description key)))
+                       (where-is-internal cmd-sym (symbol-value keymap-sym))
+                       ", ")
+            " (~" command "~)"
+            ;; (ellit-org-template-fundoc command)
+          )
+    ))
 
 (defun ellit-org--vardoc (varname &optional first-line-p)
   "Return docstring for the variable named by VARNAME.
@@ -398,11 +406,13 @@ If FIRST-LINE-P is non-nil, then return only first line of the docstring."
     ;; NOTE: emphasize arguments refs in fundoc with ~...~ syntax
     ;; TODO: emphasize `xxx' syntax
     (when fundoc
-      (replace-regexp-in-string
-       (regexp-opt (ellit-org--funargs funsym)) "~\\&~"
-       (if first-line-p
-           (car (split-string fundoc "\n"))
-         fundoc)))))
+      (let (case-fold-search)
+        (replace-regexp-in-string
+         (concat "\\<" (regexp-opt (ellit-org--funargs funsym)) "\\>")
+         "~\\&~"
+         (if first-line-p
+             (car (split-string fundoc "\n"))
+           fundoc))))))
 
 (defun ellit-org-template-fundoc1 (function)
   "Insert first line from docstring for the FUNCTION."
