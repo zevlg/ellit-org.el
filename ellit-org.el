@@ -39,7 +39,7 @@
 ;; from =.org= files or comments from =.el= files and combining them
 ;; into single =.org= file.
 ;;
-;; Idea is similiar to https://github.com/tumashu/el2org
+;; Idea is similar to https://github.com/tumashu/el2org
 ;;
 ;; However =ellit-org= implements more features, such as:
 ;; - Easy to use comments extractor from =.el=, see [[* Commenting .el files]]
@@ -48,7 +48,7 @@
 ;; 
 ;; * Why?
 ;;
-;; Separate files for code and documentanion is hard to get in sync.
+;; Separate files for code and documentation is hard to get in sync.
 ;; Once changing something in source code files, you might change
 ;; comments as well and forget about documentation.  In other words
 ;; having documentation in source code is easier to maintain for the
