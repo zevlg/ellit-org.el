@@ -79,6 +79,7 @@ Here is the example:
   ;; This line is *not* included
 #+end_src
 
+
 * Templates
 
 ellit-org relies on Org mode's macro system by adding some useful
@@ -95,23 +96,34 @@ Templates syntax:
 processing for ~MACRO_NAME~.
 
 Supported templates:
+
 - as-is(~STRING~) ::
   Insert ~STRING~ as is.
+
 - ellit-el(~FILE~) ::
   Insert results of the emacs-lisp ~FILE~ processing.
+
 - ellit-org(~FILE~) ::
   Insert results of the org ~FILE~ processing.
+
 - ellit-filename(&optional ~VERBATIM~) ::
   Insert currently processing filename.
+
 - kbd(~KEY~) ::
   Insert HTML <kbd> tag with ~KEY~ contents.
+
 - where-is(~COMMAND~, ~KEYMAP~) ::
   Insert list of keys that calls ~COMMAND~.
+
 - vardoc1(~VARIABLE~) ::
   Insert first line from docstring for the ~VARIABLE~.
+
 - vardoc(~VARIABLE~) ::
   Insert full docstring for the ~VARIABLE~.
+
 - fundoc1(~FUNCTION~) ::
   Insert first line from docstring for the ~FUNCTION~.
+
 - fundoc(~FUNCTION~) ::
   Insert full docstring for the ~FUNCTION~.
+

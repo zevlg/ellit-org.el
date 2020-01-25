@@ -45,7 +45,7 @@
 ;; - Easy to use comments extractor from =.el=, see [[* Commenting .el files]]
 ;; - Combining multiple files, =.org= or =.el=
 ;; - Templating, see [[* Templates]]
-;; 
+;;
 ;; * Why?
 ;;
 ;; Separate files for code and documentation is hard to get in sync.
@@ -53,7 +53,7 @@
 ;; comments as well and forget about documentation.  In other words
 ;; having documentation in source code is easier to maintain for the
 ;; developers.
-;; 
+;;
 ;; Also many things, useful for documentation, might be automatically
 ;; extracted from source code.  Such as:
 ;; - Keybindings
@@ -74,11 +74,11 @@
 ;; #+END_SRC
 ;;
 ;; See =ellit-org='s [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
-;; 
+;;
 ;; It is *important* to load =srcfile.el=, not just =srcfile=, to make
 ;; *possible for ~fundocX~ templates to emphasize function arguments
 ;; in case =srcfile.el= is already compiled.
-;; 
+;;
 ;; * Commenting .el files
 ;;
 ;; 1. Use double-semicolon comments, otherwise processing won't start
@@ -367,10 +367,7 @@ KEYMAP is keymap where to lookup for COMMAND.  By default
                          (ellit-org-template-kbd (key-description key)))
                        (where-is-internal cmd-sym (symbol-value keymap-sym))
                        ", ")
-            " (~" command "~)"
-            ;; (ellit-org-template-fundoc command)
-          )
-    ))
+            " (~" command "~)")))
 
 (defun ellit-org--vardoc (varname &optional first-line-p)
   "Return docstring for the variable named by VARNAME.
@@ -402,17 +399,24 @@ If FIRST-LINE-P is non-nil, then return only first line of the docstring."
   "Return docstring for the function named by FUNNAME.
 If FIRST-LINE-P is non-nil, then return only first line of the docstring."
   (let* ((funsym (intern funname))
-         (fundoc (documentation funsym)))
+         (fundoc (documentation funsym t)))
     ;; NOTE: emphasize arguments refs in fundoc with ~...~ syntax
     ;; TODO: emphasize `xxx' syntax
     (when fundoc
       (let (case-fold-search)
         (replace-regexp-in-string
-         (concat "\\<" (regexp-opt (ellit-org--funargs funsym)) "\\>")
-         "~\\&~"
-         (if first-line-p
-             (car (split-string fundoc "\n"))
-           fundoc))))))
+         (rx "`" (group (regexp "[^']+")) "'")
+         "~\\1~"
+         (replace-regexp-in-string
+          (concat "\\<" (regexp-opt (ellit-org--funargs funsym)) "\\>")
+          "~\\&~"
+          (if first-line-p
+              (car (split-string fundoc "\n"))
+
+            ;; Join all the docstring lines into single line for better
+            ;; formatting.
+            (mapconcat 'identity (split-string fundoc "\n") " ")))
+         )))))
 
 (defun ellit-org-template-fundoc1 (function)
   "Insert first line from docstring for the FUNCTION."
