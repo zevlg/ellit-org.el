@@ -4,7 +4,7 @@ EMACS_BATCH=$(EMACS) -Q -batch
 all: compile ellit-org-logo.svg README.org
 
 README.org: ellit-org.el
-	$(EMACS_BATCH) -L . -l ellit-org --eval '(let ((debug-on-error t)) (ellit-org-file "ellit-org.el" "README.org"))'
+	$(EMACS_BATCH) -L . -l ellit-org.el --eval '(let ((debug-on-error t)) (ellit-org-file-el "ellit-org.el" "README.org"))'
 
 compile: ellit-org.elc
 

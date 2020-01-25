@@ -9,16 +9,23 @@ Do not edit manually.
 #+END_QUOTE
 
 Generate documentation for Emacs Lisp package by extracting text
-from comments of =.el= files and organizing them into single =.org=
-file.
+from =.org= files or comments from =.el= files and combining them
+into single =.org= file.
 
 Idea is similiar to https://github.com/tumashu/el2org
+
+However =ellit-org= implements more features, such as:
+- Easy to use comments extractor from =.el=, see [[* Commenting .el files]]
+- Combining multiple files, =.org= or =.el=
+- Templating, see [[* Templates]]
 
 * Why?
 
 Separate files for code and documentanion is hard to get in sync.
 Once changing something in source code files, you might change
-comments as well and forget about documentation.
+comments as well and forget about documentation.  In other words
+having documentation in source code is easier to maintain for the
+developers.
 
 Also many things, useful for documentation, might be automatically
 extracted from source code.  Such as:
@@ -35,11 +42,15 @@ Sample Makefile to generate user manual for the project:
 EMACS=emacs -Q
 
 manual.org: srcfile.el <list-of-other-files-used-to-generate-manual>
-     $(EMACS) -batch -f package-initialize -l ellit-org \
-                 --eval '(ellit-org-file "srcfile.el" "manual.org")'
+     $(EMACS) -batch -f package-initialize -l ellit-org -l srcfile.el \
+                 --eval '(ellit-org-file-el "srcfile.el" "manual.org")'
 #+END_SRC
 
 See =ellit-org='s [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
+
+It is *important* to load =srcfile.el=, not just =srcfile=, to make
+*possible for ~fundocX~ templates to emphasize function arguments
+in case =srcfile.el= is already compiled.
 
 * Commenting .el files
 
@@ -68,7 +79,7 @@ Here is the example:
   ;; This line is *not* included
 #+end_src
 
-* Templating
+* Templates
 
 ellit-org relies on Org mode's macro system by adding some useful
 macroses.  See https://orgmode.org/manual/Macro-replacement.html
@@ -84,21 +95,23 @@ Templates syntax:
 processing for ~MACRO_NAME~.
 
 Supported templates:
-- as-is(<string>) ::
-  Insert STRING as is.
-- ellit(<file>) ::
-  Insert results of the FILE processing.
-- elfile() ::
+- as-is(~STRING~) ::
+  Insert ~STRING~ as is.
+- ellit-el(~FILE~) ::
+  Insert results of the emacs-lisp ~FILE~ processing.
+- ellit-org(~FILE~) ::
+  Insert results of the org ~FILE~ processing.
+- ellit-filename(&optional ~VERBATIM~) ::
   Insert currently processing filename.
-- kbd(<key>) ::
-  Insert HTML <kbd> tag with KEY contents.
-- where-is(<command>,<keymap>) ::
-  Insert list of keys that calls COMMAND.
-- vardoc1(<variable>) ::
-  Insert first line from docstring for the VARIABLE.
-- vardoc(<variable>) ::
-  Insert full docstring for the VARIABLE.
-- fundoc1(<function>) ::
-  Insert first line from docstring for the FUNCTION.
-- fundoc(<function>) ::
-  Insert full docstring for the FUNCTION.
+- kbd(~KEY~) ::
+  Insert HTML <kbd> tag with ~KEY~ contents.
+- where-is(~COMMAND~, ~KEYMAP~) ::
+  Insert list of keys that calls ~COMMAND~.
+- vardoc1(~VARIABLE~) ::
+  Insert first line from docstring for the ~VARIABLE~.
+- vardoc(~VARIABLE~) ::
+  Insert full docstring for the ~VARIABLE~.
+- fundoc1(~FUNCTION~) ::
+  Insert first line from docstring for the ~FUNCTION~.
+- fundoc(~FUNCTION~) ::
+  Insert full docstring for the ~FUNCTION~.
