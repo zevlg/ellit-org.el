@@ -41,7 +41,7 @@
 ;;
 ;; Idea is similar to https://github.com/tumashu/el2org
 ;;
-;; However =ellit-org= implements more features, such as:
+;; However ellit-org implements more features, such as:
 ;; - Easy to use comments extractor from =.el=, see [[#commenting-el-files][Commenting files]]
 ;; - Combining multiple files, =.org= or =.el=
 ;; - [[#templates][Templating]]
@@ -73,7 +73,7 @@
 ;;                  --eval '(ellit-org-file-el "srcfile.el" "manual.org")'
 ;; #+END_SRC
 ;;
-;; See =ellit-org='s [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
+;; See ellit-org's [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
 ;;
 ;; It is *important* to load =srcfile.el=, not just =srcfile=, to make
 ;; possible for ~fundocX~ templates to emphasize function arguments in
