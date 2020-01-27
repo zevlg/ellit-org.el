@@ -8,17 +8,17 @@ ARGS are passed directly to `ellit-org-file' just after
   (let ((el-file (make-temp-file "ellit-org-el-file.el")))
     (write-region content nil el-file nil 'quiet)
     (unwind-protect
-        (apply 'ellit-org-file el-file nil args)
+        (apply 'ellit-org-file-el el-file nil args)
       (delete-file el-file))))
 
-(defun ellit-org--should (content should-content &optional custom-template-alist)
+(defun ellit-org--should (content should-content &optional template-alist)
   "Same as `should', but takes into account `ellit-org' specifics."
   (when (string-prefix-p "\n" content)
     (setq content (substring content 1)))
   (when (string-prefix-p "\n" should-content)
     (setq should-content (substring should-content 1)))
 
-  (should (equal (ellit-org-file--on-str content custom-template-alist)
+  (should (equal (ellit-org-file--on-str content template-alist)
                  should-content)))
 
 
@@ -48,7 +48,7 @@ Processing continues
   (ellit-org--should "
 ;; * This starts processing, 1line
 ;; Processing continues
-<--- stops processing here
+'(<--- stops processing here)
 ;; New not matching commentary block
 ;; * Heading in the middle
 ;; - List in the middle
@@ -61,6 +61,7 @@ Processing continues
                      "
 * This starts processing, 1line
 Processing continues
+
 * New heading starting commentary block
 ")
 
@@ -71,11 +72,12 @@ Processing continues
 
 ;; * Included2
 ;; Also included
-(code here)
+'(code here)
 ;; Not icluded
 "
                      "
 #+title: included1
+
 * Included2
 Also included
 ")
@@ -84,12 +86,12 @@ Also included
 (ert-deftest ellit-org--comments-leading-trailing-strips ()
   "Test leading/trailing part of the file is trimmed."
   (ellit-org--should "
-Leading line1
-leading line2
+'(Leading line1)
+'(leading line2)
 ;; #+title: processing starts here
 ;; Processing continues
-Processing stops here
-This is not processed
+'(Processing stops here)
+'(This is not processed)
 "
                      "
 #+title: processing starts here
@@ -103,20 +105,19 @@ Processing continues
 ;; #+title: processing starts here
 ;;
 ;; Processing continues
-;;
 ;; Still continue processing
-<------- Processing stops here
+'(<------- Processing stops here)
 ;; - And continues here
 ;;
 ;; And here still processing
-stop here
+'(stop here)
 "
                      "
 #+title: processing starts here
 
 Processing continues
-
 Still continue processing
+
 - And continues here
 
 And here still processing
@@ -132,11 +133,12 @@ And here still processing
 
 ;; * Included2
 ;; Also included
-(code here)
+'(code here)
 ;; Not icluded
 "
                      "
 #+title: included1
+
 * Included2
 Also included
 ")
@@ -164,23 +166,23 @@ Processing continues
 
 ;;; Testing templates
 (ert-deftest ellit-org--template-ellit ()
-  "Test >>>ELLIT<<< template is working well."
+  "Test {{{ellit-el}}} template is working well."
   (let ((el-file2 (make-temp-file "el-file2.el")))
     (write-region "
-leading
+'leading
 ;; ** Heading from el-file2
 ;; String from el-file2
-trailing
+'trailing
 "
                   nil el-file2 nil 'quiet)
 
     (unwind-protect
         (ellit-org--should (format "
-File
+'File
 ;; * Heading from el-file1
-;; >>>ELLIT %s<<<
+;; {{{ellit-el(%s)}}}
 ;; String from el-file1
-Done" (file-name-nondirectory el-file2))
+'Done" (file-name-nondirectory el-file2))
                            "
 * Heading from el-file1
 ** Heading from el-file2
@@ -193,38 +195,18 @@ String from el-file1
 (ert-deftest ellit-org--template-custom-alist ()
   "Test `custom-template-alist' arg is working."
   (let ((custom-template-alist
-         '(("MYCUSTOM" . (lambda (_ignored)
-                           "Looks like working")))))
+         '(("MYCUSTOM" . "Looks like working"))))
     (ellit-org--should "
-File
+'File
 ;; * Testing heading
-;; >>>MYCUSTOM<<<
-Done
+;; {{{MYCUSTOM}}}
+'Done
 "
                        "
 * Testing heading
 Looks like working
 "
                        custom-template-alist)
-    ))
-
-(ert-deftest ellit-org--template-bracket-inside ()
-  "Test that single brackets are allowed as template argument."
-  (let ((test-template-alist
-         '(("TEST" . (lambda (arg)
-                       (conact "PASSED: " arg))))))
-    (ellit-org--should "
-Start
-;; * Keybindings
-;; - >>>TEST C-<left><<< to move leftmost
-;; - >>>TEST C-<right><<< to move rightmost
-Done"
-                     "
-* Keybindings
-PASSED: C-<left> to move leftmost
-PASSED: C-<right>> to move rightmost
-"
-                     test-template-alist)
     ))
 
 (ert-deftest ellit-org--teplate-modifying-match-data ()
