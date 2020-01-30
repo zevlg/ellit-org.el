@@ -221,7 +221,7 @@ Used in `ellit-filename' template.")
       (delete-region cpont (point-max))
 
       ;; Unneeded newline from processing last hunk
-      (when (= (char-before) ?\n)
+      (when (eq (char-before) ?\n)
         (delete-char -1))
       )))
 
