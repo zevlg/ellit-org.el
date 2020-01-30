@@ -151,7 +151,7 @@
     ;; - as-is(~STRING~) ::
     ;;   {{{fundoc1(ellit-org-template-as-is)}}}
     ;;
-    ;;   ~as-is(STRING)~ filter is equivalent to ~eval("STRING")
+    ;;   ~as-is(STRING)~ filter is equivalent to ~eval("STRING")~
     ("as-is" . "(eval (ellit-org-template-as-is $1))")
 
     ;; - ellit-filename(&optional ~VERBATIM~) ::

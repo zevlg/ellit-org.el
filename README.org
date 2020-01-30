@@ -1,4 +1,4 @@
-# Created 2020-01-30 Чт 18:16
+# Created 2020-01-30 Чт 18:20
 #+TITLE: [[ellit-org-logo64.png]] ellit-org
 #+AUTHOR: lg
 #+startup: showall
@@ -101,7 +101,7 @@ Supported templates:
 - as-is(~STRING~) :: 
      Insert ~STRING~ as is.
 
-     ~as-is(STRING)~ filter is equivalent to ~eval("STRING")
+     ~as-is(STRING)~ filter is equivalent to ~eval("STRING")~
 
 - ellit-filename(&optional ~VERBATIM~) :: 
      Insert currently processing filename.
