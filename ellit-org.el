@@ -69,15 +69,11 @@
 ;; EMACS=emacs -Q
 ;;
 ;; manual.org: srcfile.el <list-of-other-files-used-to-generate-manual>
-;;      $(EMACS) -batch -f package-initialize -l ellit-org -l srcfile.el \
-;;                  --eval '(ellit-org-file-el "srcfile.el" "manual.org")'
+;;      $(EMACS) -batch -f package-initialize -l ellit-org \
+;;                  --eval '(ellit-org-export "srcfile.el" "manual.org")'
 ;; #+END_SRC
 ;;
 ;; See ellit-org's [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
-;;
-;; It is *important* to load =srcfile.el=, not just =srcfile=, to make
-;; possible for ~fundocX~ templates to emphasize function arguments in
-;; case =srcfile.el= is already compiled.
 ;;
 ;; * Commenting .el files
 ;;
@@ -106,12 +102,12 @@
 ;;                                        <--- processing stops here
 ;;   ;; This line is *not* included
 ;; #+end_src
-;;
 
 
 ;;; Code:
 (require 'subr-x)                       ;`replace-region-contents'
-(require 'org)                          ;`org-macro-replace-all'
+(require 'org)
+(require 'ox-org)
 (require 'svg)                          ;for `ellit-org--logo-image'
 
 (defconst ellit-org-comment-start-regexp
@@ -154,17 +150,9 @@
 
     ;; - as-is(~STRING~) ::
     ;;   {{{fundoc1(ellit-org-template-as-is)}}}
-    ;; 
+    ;;
     ;;   ~as-is(STRING)~ filter is equivalent to ~eval("STRING")
     ("as-is" . "(eval (ellit-org-template-as-is $1))")
-
-    ;; - ellit-el(~FILE~) ::
-    ;;   {{{fundoc1(ellit-org-template-ellit-el)}}}
-    ("ellit-el" . "(eval (ellit-org-template-ellit-el $1))")
-
-    ;; - ellit-org(~FILE~) ::
-    ;;   {{{fundoc1(ellit-org-template-ellit-org)}}}
-    ("ellit-org" . "(eval (ellit-org-template-ellit-org $1))")
 
     ;; - ellit-filename(&optional ~VERBATIM~) ::
     ;;   {{{fundoc1(ellit-org-template-ellit-filename)}}}
@@ -237,56 +225,87 @@ Used in `ellit-filename' template.")
         (delete-char -1))
       )))
 
-(defun ellit-org--macro-replace-all (&optional macro-templates)
-  "Replace all macros in current buffer by their expansion.
-MACRO-TEMPLATES - list of additional macro definitions."
-  ;; NOTE: set `org-complex-heading-regexp' to string, otherwise
-  ;; `org-macro-replace-all' fails.
-  ;; `org-complex-heading-regexp' only used to recognize
-  ;; commented/non-commented headings.
-  (let ((org-complex-heading-regexp ""))
-    (org-macro-initialize-templates)
-    (let ((templates (nconc org-macro-templates
-                            (copy-sequence macro-templates)
-                            ellit-org-macro-templates)))
-      (org-macro-replace-all templates))))
+(defun ellit-org--parse-include-args (element)
+  "Parse arguments of #+ELLIT-INCLUDE keyword ELEMENT.
+Return list where first element is filename and rest are properties."
+  (let* ((value (org-element-property :value element))
+         (file (and (string-match (rx line-start (1+ (not space)))
+                                  value)
+                    (prog1 (match-string 0 value)
+                      (setq value (replace-match "" nil nil value)))))
+         (no-load (when (string-match (regexp-quote ":no-load")
+                                      value)
+                    (setq value (replace-match "" nil nil value))
+                    t)))
+    (list file :no-load no-load)))
 
-(defun ellit-org--process-org (&optional output-file template-alist)
-  "Replace all org macros in current buffer, write output to OUTPUT-FILE.
-If OUTPUT-FILE is nil, then return result as string.
-TEMPLATE-ALIST is used as alist of custom templates."
-  (ellit-org--macro-replace-all template-alist)
+(defun ellit-org--process-org (&optional props)
+  "Process all ELLIT-INCLUDE keywords in current org buffer.
+PROPS are properties, such as: `:heading'."
+  ;; TODO: support for `:heading' property to include only given
+  ;; heading.  Do it by removing everything except for `:heading'
+  ;; contents
 
-  (if output-file
-      (write-region (point-min) (point-max) output-file nil 'quiet)
-    (buffer-string)))
+  ;; Expand all #+ELLIT-INCLUDE keywords
+  (let ((ellit-include-re "^[ \t]*#\\+ELLIT-INCLUDE:")
+        (heading (plist-get props :heading)))
+    (goto-char (point-min))
+    (while (re-search-forward ellit-include-re nil t)
+      (unless (org-in-commented-heading-p)
+        (let ((element (save-match-data (org-element-at-point))))
+          (when (eq (org-element-type element) 'keyword)
+            (beginning-of-line)
+            (let ((include-args (ellit-org--parse-include-args element)))
+              ;; delete #+ELLIT-INCLUDE: keyword
+              (delete-region (point) (line-beginning-position 2))
+              (apply 'ellit-org--include include-args))))))))
 
-(defun ellit-org-file-org (org-file &optional output-file template-alist)
-  "Extract documentation from ordinary ORG-FILE.
-Write to OUTPUT-FILE, or return string if OUTPUT-FILE is nil.
-TEMPLATE-ALIST is used as alist of custom templates."
+(defun ellit-org--include (ellit-file &rest props)
+  "Include ELLIT-FILE.
+PROPS is plist of properties, such as:
+  `:heading' - To include only given heading
+  `:no-load' - Do not load .el ELLIT-FILE, loading is required to make
+               macroses like {{{fundoc(xxx)}}} work."
   (let* ((ellit-dir (when ellit-org--filename
                       (file-name-directory ellit-org--filename)))
-         (ellit-org--filename (expand-file-name org-file ellit-dir)))
-    (with-temp-buffer
-      (insert-file-contents ellit-org--filename)
-      (ellit-org--process-org output-file template-alist))))
+         (ellit-org--filename (expand-file-name ellit-file ellit-dir)))
+    (insert (with-temp-buffer
+              (insert-file-contents ellit-org--filename)
 
-(defun ellit-org-file-el (el-file &optional output-file template-alist)
-  "Extract documentation from emacs-lisp file EL-FILE.
-Write to OUTPUT-FILE, or return string if OUTPUT-FILE is nil.
-TEMPLATE-ALIST is used as alist of custom templates."
-  (let* ((ellit-dir (when ellit-org--filename
-                      (file-name-directory ellit-org--filename)))
-         (ellit-org--filename (expand-file-name el-file ellit-dir)))
-    (condition-case err
-        (load ellit-org--filename nil t)
-      (t
-       (error "Error loading \"%s\": %S" ellit-org--filename err)))
-    (with-temp-buffer
-      (insert-file-contents ellit-org--filename)
-      (ellit-org--process-el)
-      (ellit-org--process-org output-file template-alist))))
+              (when (equal "el" (file-name-extension ellit-org--filename))
+                (unless (plist-get props :no-load)
+                  (condition-case err
+                      (load ellit-org--filename nil t)
+                    (t
+                     (error "Error loading \"%s\": %S"
+                            ellit-org--filename err))))
+                (ellit-org--process-el))
+
+              (ellit-org--process-org props)
+              (buffer-string)))))
+
+(defun ellit-org--insert-macros ()
+  "Insert macroses from `ellit-org-macro-templates'."
+  (dolist (macro ellit-org-macro-templates)
+    (insert "#+MACRO: " (car macro) "   " (cdr macro) "\n")))
+
+;;;###autoload
+(defun ellit-org-export (ellit-file output-org-file &rest props)
+  "Export ELLIT-FILE to OUTPUT-ORG-FILE.
+ELLIT-FILE could be one of \".org\" or \".el\".
+PROPS is following property list:
+  `:no-load' - Do not load corresponding .el file.
+  `:heading' - Export only this heading section from ELLIT-FILE.
+  `:no-ellit-macros' - Do not install ellit macro templates."
+  (with-temp-buffer
+    (apply 'ellit-org--include ellit-file props)
+    ;; NOTE: `ellit-org--filename' is set for {{{ellit-filename}}} macro
+    (let ((ellit-org--filename (expand-file-name ellit-file))
+          (org-export-global-macros
+           (nconc (unless (plist-get props :no-ellit-macros)
+                    (copy-sequence ellit-org-macro-templates))
+                  org-export-global-macros)))
+      (org-export-to-file 'org output-org-file))))
 
 (defun ellit-org--logo-image (&optional size debug-p)
   "Generate logo for the `ellit-org'."
@@ -345,24 +364,6 @@ TEMPLATE-ALIST is used as alist of custom templates."
 (defun ellit-org-template-as-is (string)
   "Insert STRING as is."
   string)
-
-(defun ellit-org-template-ellit-el (file)
-  "Insert results of the emacs-lisp FILE processing."
-  ;; NOTE: remove trailing \n, to not insert double newline for
-  ;; {{{ellit-el(file)}}} macro
-  (let ((output (ellit-org-file-el file)))
-    (if (string-suffix-p "\n" output)
-        (substring output 0 -1)
-      output)))
-
-(defun ellit-org-template-ellit-org (file)
-  "Insert results of the org FILE processing."
-  ;; NOTE: remove trailing \n, to not insert double newline for
-  ;; {{{ellit-org(file)}}} macro
-  (let ((output (ellit-org-file-org file)))
-    (if (string-suffix-p "\n" output)
-        (substring output 0 -1)
-      output)))
 
 (defun ellit-org-template-ellit-filename (&optional verbatim)
   "Insert currently processing filename."
