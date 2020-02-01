@@ -1,6 +1,6 @@
-# Created 2020-01-30 Чт 18:20
+# Created 2020-02-01 Сб 03:12
 #+TITLE: [[ellit-org-logo64.png]] ellit-org
-#+AUTHOR: lg
+#+AUTHOR: Zajcev Evgeny
 #+startup: showall
 
 #+begin_quote

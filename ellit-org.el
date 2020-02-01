@@ -289,6 +289,19 @@ PROPS is plist of properties, such as:
   (dolist (macro ellit-org-macro-templates)
     (insert "#+MACRO: " (car macro) "   " (cdr macro) "\n")))
 
+
+;;; Ellit-Org export backend, retains `html' export snippets
+(defun ellit-org-export-snippet (export-snippet _contents _info)
+  "Transcode a EXPORT-SNIPPET object from Org to ellit-org.
+Retains `html' export snippets.
+CONTENTS is nil.  INFO is a plist holding contextual information."
+  (when (eq (org-export-snippet-backend export-snippet) 'html)
+    (concat "@@html:" (org-element-property :value export-snippet) "@@")))
+
+(org-export-define-derived-backend 'ellit-org 'org
+  :translate-alist '((export-snippet . ellit-org-export-snippet)))
+
+;;;
 ;;;###autoload
 (defun ellit-org-export (ellit-file output-org-file &rest props)
   "Export ELLIT-FILE to OUTPUT-ORG-FILE.
@@ -305,7 +318,7 @@ PROPS is following property list:
            (nconc (unless (plist-get props :no-ellit-macros)
                     (copy-sequence ellit-org-macro-templates))
                   org-export-global-macros)))
-      (org-export-to-file 'org output-org-file))))
+      (org-export-to-file 'ellit-org output-org-file))))
 
 (defun ellit-org--logo-image (&optional size debug-p)
   "Generate logo for the `ellit-org'."
