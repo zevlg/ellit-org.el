@@ -242,6 +242,9 @@ Return list where first element is filename and rest are properties."
 (defun ellit-org--process-org (&optional props)
   "Process all ELLIT-INCLUDE keywords in current org buffer.
 PROPS are properties, such as: `:heading'."
+  ;; init org regexps 
+  (let ((org-inhibit-startup t)) (org-mode))
+
   ;; TODO: support for `:heading' property to include only given
   ;; heading.  Do it by removing everything except for `:heading'
   ;; contents
@@ -275,7 +278,8 @@ PROPS is plist of properties, such as:
               (when (equal "el" (file-name-extension ellit-org--filename))
                 (unless (plist-get props :no-load)
                   (condition-case err
-                      (load ellit-org--filename nil t)
+                      (let ((load-prefer-newer t))
+                        (load-file ellit-org--filename))
                     (t
                      (error "Error loading \"%s\": %S"
                             ellit-org--filename err))))
