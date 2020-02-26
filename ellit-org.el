@@ -25,7 +25,8 @@
 
 ;;; Commentary:
 
-;; #+TITLE: [[ellit-org-logo64.png]] ellit-org
+;; #+OPTIONS: timestamp:nil \n:t
+;; #+TITLE: [[ellit-org-logo64.png]] ellit-org (v{{{eval(ellit-org-version,t)}}})
 ;; #+STARTUP: showall
 ;;
 ;; #+BEGIN_QUOTE
@@ -73,7 +74,10 @@
 ;;                  --eval '(ellit-org-export "srcfile.el" "manual.org")'
 ;; #+END_SRC
 ;;
-;; See ellit-org's [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
+;; ** Projects that uses ellit-org
+;;    - ellit-org itself, see [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
+;;    - [[https://github.com/zevlg/telega.el][telega.el]], see its [[https://github.com/zevlg/telega.el/blob/master/doc/Makefile][Makefile]] to build documentation
+;;    - [[https://github.com/zevlg/grammarbot.el][grammarbot.el]], see its [[https://github.com/zevlg/grammarbot.el/blob/master/Makefile][Makefile]]
 ;;
 ;; * Commenting .el files
 ;;
@@ -85,7 +89,7 @@
 ;; 5. When processing stops, newline is emmited to output
 ;;
 ;; Here is the example:
-;; #+begin_src emacs-lisp
+;; #+BEGIN_SRC emacs-lisp
 ;;   ;; * Heading1                        <--- processing starts here
 ;;   ;; This line is included into output
 ;;   ;;
@@ -101,7 +105,7 @@
 ;;   ;;    non-commentary line below
 ;;                                        <--- processing stops here
 ;;   ;; This line is *not* included
-;; #+end_src
+;; #+END_SRC
 
 
 ;;; Code:
@@ -134,9 +138,10 @@
 ;; sure your macroses are in processed part of the comments.
 ;;
 ;; Templates syntax:
-;; #+begin_example
+;; #+BEGIN_EXAMPLE
 ;; {{{macro_name(arguments)}}}
-;; #+end_example
+;; #+END_EXAMPLE
+;;
 ;; ~ARGUMENTS~ are optional string supplied to function which does
 ;; processing for ~MACRO_NAME~.
 ;;
@@ -144,9 +149,9 @@
 
 (defvar ellit-org-macro-templates
   '(
-    ;; - eval(~SEXP~) ::
+    ;; - eval(~SEXP~ [, ~AS-STRING~ ]) ::
     ;;   {{{fundoc1(ellit-org-template-eval)}}}
-    ("eval" . "(eval (ellit-org-template-eval $1))")
+    ("eval" . "(eval (ellit-org-template-eval $1 $2))")
 
     ;; - as-is(~STRING~) ::
     ;;   {{{fundoc1(ellit-org-template-as-is)}}}
@@ -154,7 +159,7 @@
     ;;   ~as-is(STRING)~ filter is equivalent to ~eval("STRING")~
     ("as-is" . "(eval (ellit-org-template-as-is $1))")
 
-    ;; - ellit-filename(&optional ~VERBATIM~) ::
+    ;; - ellit-filename([ ~VERBATIM~ ]) ::
     ;;   {{{fundoc1(ellit-org-template-ellit-filename)}}}
     ("ellit-filename" . "(eval (ellit-org-template-ellit-filename $1))")
 
@@ -242,7 +247,7 @@ Return list where first element is filename and rest are properties."
 (defun ellit-org--process-org (&optional props)
   "Process all ELLIT-INCLUDE keywords in current org buffer.
 PROPS are properties, such as: `:heading'."
-  ;; init org regexps 
+  ;; init org regexps
   (let ((org-inhibit-startup t)) (org-mode))
 
   ;; TODO: support for `:heading' property to include only given
@@ -374,9 +379,12 @@ PROPS is following property list:
 
 
 ;;; Templates
-(defun ellit-org-template-eval (sexp)
-  "Insert results of the SEXP evaluation."
-  (format "%S" (eval (read sexp))))
+(defun ellit-org-template-eval (sexp &optional as-string)
+  "Insert results of the SEXP evaluation.
+If AS-STRING is non-nil then use \"%s\" instead of \"%S\" for
+formatting SEXP."
+  (let ((as-string-p (not (string-empty-p as-string))))
+    (format (if as-string-p "%s" "%S") (eval (read sexp)))))
 
 (defun ellit-org-template-as-is (string)
   "Insert STRING as is."
