@@ -266,7 +266,7 @@ PROPS are properties, such as: `:heading'."
             (let ((include-args (ellit-org--parse-include-args element)))
               ;; delete #+ELLIT-INCLUDE: keyword
               (delete-region (point) (line-beginning-position 2))
-              (apply 'ellit-org--include include-args))))))))
+              (apply #'ellit-org--include include-args))))))))
 
 (defun ellit-org--include (ellit-file &rest props)
   "Include ELLIT-FILE.
@@ -320,7 +320,7 @@ PROPS is following property list:
   `:heading' - Export only this heading section from ELLIT-FILE.
   `:no-ellit-macros' - Do not install ellit macro templates."
   (with-temp-buffer
-    (apply 'ellit-org--include ellit-file props)
+    (apply #'ellit-org--include ellit-file props)
     ;; NOTE: `ellit-org--filename' is set for {{{ellit-filename}}} macro
     (let ((ellit-org--filename (expand-file-name ellit-file))
           (org-export-global-macros
