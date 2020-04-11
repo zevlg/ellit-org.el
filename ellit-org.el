@@ -150,7 +150,7 @@
 (defvar ellit-org-macro-templates
   '(
     ;; - eval(~SEXP~ [, ~AS-STRING~ ]) ::
-    ;;   {{{fundoc1(ellit-org-template-eval)}}}
+    ;;   {{{fundoc(ellit-org-template-eval, 2)}}}
     ("eval" . "(eval (ellit-org-template-eval $1 $2))")
 
     ;; - as-is(~STRING~) ::
@@ -160,32 +160,32 @@
     ("as-is" . "(eval (ellit-org-template-as-is $1))")
 
     ;; - ellit-filename([ ~VERBATIM~ ]) ::
-    ;;   {{{fundoc1(ellit-org-template-ellit-filename)}}}
+    ;;   {{{fundoc(ellit-org-template-ellit-filename, 2)}}}
     ("ellit-filename" . "(eval (ellit-org-template-ellit-filename $1))")
 
     ;; - kbd(~KEY~) ::
-    ;;   {{{fundoc1(ellit-org-template-kbd)}}}
+    ;;   {{{fundoc(ellit-org-template-kbd, 2)}}}
     ("kbd" . "(eval (ellit-org-template-kbd $1))")
 
     ;; - where-is(~COMMAND~, ~KEYMAP~) ::
-    ;;   {{{fundoc1(ellit-org-template-where-is)}}}
+    ;;   {{{fundoc(ellit-org-template-where-is, 2)}}}
     ("where-is" . "(eval (ellit-org-template-where-is $1 $2))")
 
     ;; - vardoc1(~VARIABLE~) ::
-    ;;   {{{fundoc1(ellit-org-template-vardoc1)}}}
+    ;;   {{{fundoc(ellit-org-template-vardoc1, 2)}}}
     ("vardoc1" . "(eval (ellit-org-template-vardoc1 $1))")
 
-    ;; - vardoc(~VARIABLE~) ::
-    ;;   {{{fundoc1(ellit-org-template-vardoc)}}}
-    ("vardoc" . "(eval (ellit-org-template-vardoc $1))")
+    ;; - vardoc(~VARIABLE~ [, ~INDENT-LEVEL~ ]) ::
+    ;;   {{{fundoc(ellit-org-template-vardoc, 2)}}}
+    ("vardoc" . "(eval (ellit-org-template-vardoc $1 $2))")
 
     ;; - fundoc1(~FUNCTION~) ::
-    ;;   {{{fundoc1(ellit-org-template-fundoc1)}}}
+    ;;   {{{fundoc(ellit-org-template-fundoc1, 2)}}}
     ("fundoc1" . "(eval (ellit-org-template-fundoc1 $1))")
 
-    ;; - fundoc(~FUNCTION~) ::
-    ;;   {{{fundoc1(ellit-org-template-fundoc)}}}
-    ("fundoc" . "(eval (ellit-org-template-fundoc $1))")
+    ;; - fundoc(~FUNCTION~ [, ~INDENT-LEVEL~ ]) ::
+    ;;   {{{fundoc(ellit-org-template-fundoc, 2)}}}
+    ("fundoc" . "(eval (ellit-org-template-fundoc $1 $2))")
     )
   "Alist of org macro templates.
 Each element in form:
@@ -391,7 +391,8 @@ formatting SEXP."
   string)
 
 (defun ellit-org-template-ellit-filename (&optional verbatim)
-  "Insert currently processing filename."
+  "Insert currently processing filename.
+If VERBATIM is specified, then outline filename with verbatim markup."
   (let ((verbatim-p (not (string-empty-p verbatim))))
     (concat (when verbatim-p "=")
             (file-name-nondirectory ellit-org--filename)
@@ -414,6 +415,13 @@ KEYMAP is keymap where to lookup for COMMAND.  By default
                        ", ")
             " (~" command "~)")))
 
+(defun ellit--indented-docstring (docstring indent-level)
+  (if (and indent-level (not (string-empty-p indent-level)))
+      (mapconcat #'identity (split-string docstring "\n")
+                 (concat "\n" (make-string
+                               (string-to-number indent-level) ?\s)))
+    docstring))
+
 (defun ellit-org--vardoc (varname &optional first-line-p)
   "Return docstring for the variable named by VARNAME.
 If FIRST-LINE-P is non-nil, then return only first line of the docstring."
@@ -434,9 +442,9 @@ If FIRST-LINE-P is non-nil, then return only first line of the docstring."
   "Insert first line from docstring for the VARIABLE."
   (ellit-org--vardoc variable 'first-line))
 
-(defun ellit-org-template-vardoc (variable)
+(defun ellit-org-template-vardoc (variable &optional indent-level)
   "Insert full docstring for the VARIABLE."
-  (ellit-org--vardoc variable))
+  (ellit--indented-docstring (ellit-org--vardoc variable) indent-level))
 
 (defun ellit-org--funargs (funsym)
   "Return list of FUNSYM function arguments as list of strings."
@@ -463,19 +471,16 @@ If FIRST-LINE-P is non-nil, then return only first line of the docstring."
           "~\\&~"
           (if first-line-p
               (car (split-string fundoc "\n"))
-
-            ;; Join all the docstring lines into single line for better
-            ;; formatting.
-            (mapconcat 'identity (split-string fundoc "\n") " ")))
+            fundoc))
          )))))
 
 (defun ellit-org-template-fundoc1 (function)
   "Insert first line from docstring for the FUNCTION."
   (ellit-org--fundoc function 'first-line))
 
-(defun ellit-org-template-fundoc (function)
+(defun ellit-org-template-fundoc (function &optional indent-level)
   "Insert full docstring for the FUNCTION."
-  (ellit-org--fundoc function))
+  (ellit--indented-docstring (ellit-org--fundoc function) indent-level))
 
 (provide 'ellit-org)
 

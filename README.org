@@ -101,6 +101,8 @@ Supported templates:
 
 - eval(~SEXP~ [, ~AS-STRING~ ]) :: 
      Insert results of the ~SEXP~ evaluation.
+     If ~AS-STRING~ is non-nil then use "%s" instead of "%S" for
+     formatting ~SEXP~.
 
 - as-is(~STRING~) :: 
      Insert ~STRING~ as is.
@@ -109,21 +111,24 @@ Supported templates:
 
 - ellit-filename([ ~VERBATIM~ ]) :: 
      Insert currently processing filename.
+     If ~VERBATIM~ is specified, then outline filename with verbatim markup.
 
 - kbd(~KEY~) :: 
      Insert HTML <kbd> tag with ~KEY~ contents.
 
 - where-is(~COMMAND~, ~KEYMAP~) :: 
      Insert list of keys that calls ~COMMAND~.
+     ~KEYMAP~ is keymap where to lookup for ~COMMAND~.  By default
+     ~global-map~ is considered.
 
 - vardoc1(~VARIABLE~) :: 
      Insert first line from docstring for the ~VARIABLE~.
 
-- vardoc(~VARIABLE~) :: 
+- vardoc(~VARIABLE~ [, ~INDENT-LEVEL~ ]) :: 
      Insert full docstring for the ~VARIABLE~.
 
 - fundoc1(~FUNCTION~) :: 
      Insert first line from docstring for the ~FUNCTION~.
 
-- fundoc(~FUNCTION~) :: 
+- fundoc(~FUNCTION~ [, ~INDENT-LEVEL~ ]) :: 
      Insert full docstring for the ~FUNCTION~.
