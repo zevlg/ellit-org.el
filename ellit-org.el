@@ -7,8 +7,8 @@
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/zevlg/ellit-org.el
-;; Version: 0.1
-(defconst ellit-org-version "0.1")
+;; Version: 0.2
+(defconst ellit-org-version "0.2")
 
 ;; ellit-org is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -156,7 +156,7 @@
     ;; - as-is(~STRING~) ::
     ;;   {{{fundoc1(ellit-org-template-as-is)}}}
     ;;
-    ;;   ~as-is(STRING)~ filter is equivalent to ~eval("STRING")~
+    ;;   ~as-is(STRING)~ filter is equivalent to ~eval("STRING", t)~
     ("as-is" . "(eval (ellit-org-template-as-is $1))")
 
     ;; - ellit-filename([ ~VERBATIM~ ]) ::
@@ -293,11 +293,6 @@ PROPS is plist of properties, such as:
               (ellit-org--process-org props)
               (buffer-string)))))
 
-(defun ellit-org--insert-macros ()
-  "Insert macroses from `ellit-org-macro-templates'."
-  (dolist (macro ellit-org-macro-templates)
-    (insert "#+MACRO: " (car macro) "   " (cdr macro) "\n")))
-
 
 ;;; Ellit-Org export backend, retains `html' export snippets
 (defun ellit-org-export-snippet (export-snippet _contents _info)
@@ -307,8 +302,51 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
   (when (eq (org-export-snippet-backend export-snippet) 'html)
     (concat "@@html:" (org-element-property :value export-snippet) "@@")))
 
+(defun ellit-org-toc--ref-github-style (text)
+  "Return local anchor name created from TEXT."
+  (replace-regexp-in-string
+   "[^[:alnum:]_-]" ""
+   (replace-regexp-in-string
+    " " "-"
+    (replace-regexp-in-string
+     "--" "" (downcase (org-link-display-format text))))))
+
+(defun ellit-org-toc (depth info)
+  "Build a table of contents for `ellit-org' backend. 
+DEPTH is an integer specifying the depth of the table.
+INFO is a plist used as a communication channel."
+  (let ((toc-ents
+         (mapcar (lambda (headline)
+                   (unless (equal (org-element-property :TOC headline) "this")
+                     (let ((desc (org-export-data-with-backend
+                                  (org-export-get-alt-title headline info)
+                                  (org-export-toc-entry-backend 'ellit-org)
+                                  info)))
+                     (list (org-export-get-relative-level headline info)
+                           (ellit-org-toc--ref-github-style desc)
+                           desc))))
+                 (org-export-collect-headlines info depth))))
+    (mapconcat (lambda (toc-ent)
+                 (format "%s- [[#%s][%s]]" (make-string (* 2 (car toc-ent)) ?\s)
+                         (cadr toc-ent) (caddr toc-ent)))
+               (cl-remove-if 'null toc-ents) "\n")))
+
+(defun ellit-org-export-keyword (keyword _contents info)
+  "Transcode KEYWORD element back into Org syntax.
+CONTENTS is nil.  INFO is ignored."
+  (let ((key (org-element-property :key keyword)))
+    (if (equal key "TOC")
+      (let ((case-fold-search t)
+            (value (org-element-property :value keyword)))
+        (when (string-match "\\<headlines\\>" value)
+          (let ((depth (and (string-match "\\<[0-9]+\\>" value)
+                            (string-to-number (match-string 0 value)))))
+            (ellit-org-toc depth info))))
+      (org-org-keyword keyword _contents info))))
+
 (org-export-define-derived-backend 'ellit-org 'org
-  :translate-alist '((export-snippet . ellit-org-export-snippet)))
+  :translate-alist '((keyword . ellit-org-export-keyword)
+                     (export-snippet . ellit-org-export-snippet)))
 
 ;;;
 ;;;###autoload
