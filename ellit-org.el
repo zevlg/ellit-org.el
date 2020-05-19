@@ -336,12 +336,12 @@ INFO is a plist used as a communication channel."
 CONTENTS is nil.  INFO is ignored."
   (let ((key (org-element-property :key keyword)))
     (if (equal key "TOC")
-      (let ((case-fold-search t)
-            (value (org-element-property :value keyword)))
-        (when (string-match "\\<headlines\\>" value)
-          (let ((depth (and (string-match "\\<[0-9]+\\>" value)
-                            (string-to-number (match-string 0 value)))))
-            (ellit-org-toc depth info))))
+        (let ((case-fold-search t)
+              (value (org-element-property :value keyword)))
+          (when (string-match "\\<headlines\\>" value)
+            (let ((depth (and (string-match "\\<[0-9]+\\>" value)
+                              (string-to-number (match-string 0 value)))))
+              (ellit-org-toc depth info))))
       (org-org-keyword keyword _contents info))))
 
 (org-export-define-derived-backend 'ellit-org 'org
