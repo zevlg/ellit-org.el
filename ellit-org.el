@@ -7,8 +7,8 @@
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/zevlg/ellit-org.el
-;; Version: 0.2
-(defconst ellit-org-version "0.2")
+;; Version: 0.3
+(defconst ellit-org-version "0.3")
 
 ;; ellit-org is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -497,20 +497,29 @@ If FIRST-LINE-P is non-nil, then return only first line of the docstring."
 If FIRST-LINE-P is non-nil, then return only first line of the docstring."
   (let* ((funsym (intern funname))
          (fundoc (documentation funsym t)))
-    ;; NOTE: emphasize arguments refs in fundoc with ~...~ syntax
-    ;; TODO: emphasize `xxx' syntax
     (when fundoc
       (let (case-fold-search)
+        ;; NOTE: Handle `\\[command]' syntax
         (replace-regexp-in-string
-         (rx "`" (group (regexp "[^']+")) "'")
-         "~\\1~"
+         (rx (optional "`") "\\[" (group (1+ (not "]"))) "]" (optional "'"))
+         (lambda (cmdstr)
+           (let ((keys (where-is-internal (intern (match-string 1 cmdstr)))))
+             (ellit-org-template-kbd (key-description (car keys)))))
+
+         ;; NOTE: emphasize `xxx' syntax
          (replace-regexp-in-string
-          (concat "\\<" (regexp-opt (ellit-org--funargs funsym)) "\\>")
-          "~\\&~"
-          (if first-line-p
-              (car (split-string fundoc "\n"))
-            fundoc))
-         )))))
+          (rx "`" (group (regexp "[^']+")) "'")
+          "~\\1~"
+
+          ;; NOTE: emphasize arguments refs in fundoc with ~...~
+          ;; syntax
+          (replace-regexp-in-string
+           (concat "\\<" (regexp-opt (ellit-org--funargs funsym)) "\\>")
+           "~\\&~"
+           (if first-line-p
+               (car (split-string fundoc "\n"))
+             fundoc))
+          ))))))
 
 (defun ellit-org-template-fundoc1 (function)
   "Insert first line from docstring for the FUNCTION."
