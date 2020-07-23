@@ -499,17 +499,17 @@ If FIRST-LINE-P is non-nil, then return only first line of the docstring."
          (fundoc (documentation funsym t)))
     (when fundoc
       (let (case-fold-search)
-        ;; NOTE: Handle `\\[command]' syntax
+        ;; NOTE: emphasize `xxx' syntax
         (replace-regexp-in-string
-         (rx (optional "`") "\\[" (group (1+ (not "]"))) "]" (optional "'"))
-         (lambda (cmdstr)
-           (let ((keys (where-is-internal (intern (match-string 1 cmdstr)))))
-             (ellit-org-template-kbd (key-description (car keys)))))
+         (rx "`" (group (regexp "[^']+")) "'")
+         "~\\1~"
 
-         ;; NOTE: emphasize `xxx' syntax
+         ;; NOTE: Handle `\\[command]' syntax
          (replace-regexp-in-string
-          (rx "`" (group (regexp "[^']+")) "'")
-          "~\\1~"
+          (rx (optional "`") "\\[" (group (1+ (not "]"))) "]" (optional "'"))
+          (lambda (cmdstr)
+            (let ((keys (where-is-internal (intern (match-string 1 cmdstr)))))
+              (ellit-org-template-kbd (key-description (car keys)))))
 
           ;; NOTE: emphasize arguments refs in fundoc with ~...~
           ;; syntax
