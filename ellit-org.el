@@ -7,8 +7,8 @@
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/zevlg/ellit-org.el
-;; Version: 0.3
-(defconst ellit-org-version "0.3")
+;; Version: 0.5
+(defconst ellit-org-version "0.5")
 
 ;; ellit-org is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 
 ;;; Commentary:
 
+;;; ellit-org:
 ;; #+OPTIONS: timestamp:nil \n:t
 ;; #+TITLE: [[ellit-org-logo64.png]] ellit-org (v{{{eval(ellit-org-version,t)}}})
 ;; #+STARTUP: showall
@@ -44,7 +45,10 @@
 ;;
 ;; However ellit-org implements more features, such as:
 ;; - Easy to use comments extractor from =.el=, see [[#commenting-el-files][Commenting files]]
-;; - Combining multiple files, =.org= or =.el=
+;; - [[#combining-multiple-files][Combining multiple files]], =.org= or =.el=
+;; - GitHub friendly ~:CUSTOM_ID~ property generation for headings, so
+;;   exporting html to GitHub Pages from resulting =.org= is easy as
+;;   calling ~org-html-export-to-html~ function
 ;; - [[#templates][Templating]]
 ;;
 ;; * Why?
@@ -81,15 +85,14 @@
 ;;
 ;; * Commenting .el files
 ;;
-;; 1. Use double-semicolon comments, otherwise processing won't start
-;; 2. Processing starts when Org mode's property, heading or list is seen
-;; 3. Processing starts only if matched comment line begins commentary
-;;    block, i.e. previous line is a non-commentary line
-;; 4. Processing stops on any non-commentary line
-;; 5. When processing stops, newline is emmited to output
+;; 1. Use ~;;; ellit-org: [LABEL]~ as trigger for ellit-org to start
+;;    processing following comments
+;; 2. Processing stops on any non-commentary line
+;; 3. When processing stops, newline is emmited to output
 ;;
 ;; Here is the example:
 ;; #+BEGIN_SRC emacs-lisp
+;;   ;;; ellit-org:
 ;;   ;; * Heading1                        <--- processing starts here
 ;;   ;; This line is included into output
 ;;   ;;
@@ -97,8 +100,8 @@
 ;;                                        <--- processing stops here
 ;;   ;; This line is NOT included into output
 ;;   ;; * This line also NOT included
-;;   ;;   Since it does not begin the commentary block, see 3.
 ;;
+;;   ;;; ellit-org:
 ;;   ;; - However this line, is included  <--- processing starts here
 ;;   ;;
 ;;   ;;    Since new processing is started, and it will stop only on
@@ -106,6 +109,13 @@
 ;;                                        <--- processing stops here
 ;;   ;; This line is *not* included
 ;; #+END_SRC
+;;
+;; * Combining multiple files
+;;
+;; Multiple =.org= and =.el= files might be combined forming final
+;; result as single =.org= file.
+;;
+;; *TODO*: write me
 
 
 ;;; Code:
@@ -119,16 +129,13 @@
       (or (regexp "\s") eol)))
 
 (defvar ellit-org-start-regexp
-  (rx (or buffer-start
-          (and line-start (0+ (not ";")) "\n"))
-
-      line-start (0+ (regexp "\s")) ";;" (1+ space)
-      (or "#+"
-          (and (or (1+ "*") "+" "-"
-                   (and (1+ digit) (or "." ")")))
-               space)))
+  (rx line-start (0+ (regexp "[\s\t]"))
+      ";;; ellit-org:" (0+ (regexp "[\s\t]"))
+      (group (0+ not-newline))
+      line-end)
   "Regexp matching start of the text to extract.")
 
+;;; ellit-org: templates
 ;; * Templates
 ;;
 ;; ellit-org relies on Org mode's macro system by adding some useful
@@ -149,40 +156,49 @@
 
 (defvar ellit-org-macro-templates
   '(
+    ;;; ellit-org: templates
     ;; - eval(~SEXP~ [, ~AS-STRING~ ]) ::
     ;;   {{{fundoc(ellit-org-template-eval, 2)}}}
     ("eval" . "(eval (ellit-org-template-eval $1 $2))")
 
+    ;;; ellit-org: templates
     ;; - as-is(~STRING~) ::
     ;;   {{{fundoc1(ellit-org-template-as-is)}}}
     ;;
     ;;   ~as-is(STRING)~ filter is equivalent to ~eval("STRING", t)~
     ("as-is" . "(eval (ellit-org-template-as-is $1))")
 
+    ;;; ellit-org: templates
     ;; - ellit-filename([ ~VERBATIM~ ]) ::
     ;;   {{{fundoc(ellit-org-template-ellit-filename, 2)}}}
     ("ellit-filename" . "(eval (ellit-org-template-ellit-filename $1))")
 
+    ;;; ellit-org: templates
     ;; - kbd(~KEY~) ::
     ;;   {{{fundoc(ellit-org-template-kbd, 2)}}}
     ("kbd" . "(eval (ellit-org-template-kbd $1))")
 
+    ;;; ellit-org: templates
     ;; - where-is(~COMMAND~, ~KEYMAP~) ::
     ;;   {{{fundoc(ellit-org-template-where-is, 2)}}}
     ("where-is" . "(eval (ellit-org-template-where-is $1 $2))")
 
+    ;;; ellit-org: templates
     ;; - vardoc1(~VARIABLE~) ::
     ;;   {{{fundoc(ellit-org-template-vardoc1, 2)}}}
     ("vardoc1" . "(eval (ellit-org-template-vardoc1 $1))")
 
+    ;;; ellit-org: templates
     ;; - vardoc(~VARIABLE~ [, ~INDENT-LEVEL~ ]) ::
     ;;   {{{fundoc(ellit-org-template-vardoc, 2)}}}
     ("vardoc" . "(eval (ellit-org-template-vardoc $1 $2))")
 
+    ;;; ellit-org: templates
     ;; - fundoc1(~FUNCTION~) ::
     ;;   {{{fundoc(ellit-org-template-fundoc1, 2)}}}
     ("fundoc1" . "(eval (ellit-org-template-fundoc1 $1))")
 
+    ;;; ellit-org: templates
     ;; - fundoc(~FUNCTION~ [, ~INDENT-LEVEL~ ]) ::
     ;;   {{{fundoc(ellit-org-template-fundoc, 2)}}}
     ("fundoc" . "(eval (ellit-org-template-fundoc $1 $2))")
@@ -197,31 +213,91 @@ See `org-macro-templates'.")
   "Currently processing filename.
 Used in `ellit-filename' template.")
 
-(defun ellit-org--process-el ()
-  "Extract org bits from emacs lisp comments of current buffer."
+(defvar ellit-org-edit--buffer nil)
+(make-variable-buffer-local 'ellit-org-edit--buffer)
+(defvar ellit-org-edit--hunk-labels nil)
+(make-variable-buffer-local 'ellit-org-edit--hunk-labels)
+(defvar ellit-org-edit--hunk-position nil)
+(make-variable-buffer-local 'ellit-org-edit--hunk-position)
+
+(defvar ellit-org-edit-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'ellit-org-edit-finish)
+    map)
+  "The keymap to be used when editing code messages.")
+
+(define-derived-mode ellit-org-edit-mode org-mode nil
+  "Edit ellit-org hunk in the .el file."
+  )
+
+(defun ellit-org-edit-hunk ()
+  "Interactively edit ellit-org hunk at point."
+  (interactive)
+  (let ((hunk-buffer (current-buffer))
+        hunk-start hunk-end hunk-labels)
+    ;; extract the hunk
+    (save-excursion
+      (when (re-search-backward ellit-org-start-regexp nil 'no-error)
+        (setq hunk-labels (split-string (match-string 1) "," t "\s+"))
+        (setq hunk-start (point-at-bol))
+        (forward-line 1)
+        (while (looking-at ellit-org-comment-start-regexp)
+          (forward-line 1))
+        (setq hunk-end (point))))
+
+    (unless hunk-start
+      (user-error "No ellit-org hunk at point"))
+
+    (switch-to-buffer (get-buffer-create "*Edit ellit-org hunk*"))
+    (kill-all-local-variables)
+
+    (setq-local ellit-org-edit--buffer hunk-buffer)
+    (setq-local ellit-org-edit--hunk-labels hunk-labels)
+    (setq-local ellit-org-edit--hunk-position (cons hunk-start hunk-end))
+    (ellit-org-edit-mode)
+    ))
+
+(defun ellit-org-edit-finish ()
+  "Accept ellit-org hunk after edition."
+  (interactive)
+  )
+
+
+(defun ellit-org--process-el (&optional label single-hunk-p)
+  "Extract org bits from Emacs Lisp comments of current buffer.
+If LABEL is specified, then extract only parts under LABEL
+i.e. starting with \";;; ellit-org: LABEL\".
+If SINGLE-HUNK-P is non-nil, then process only fist ellit-org
+hunk matching LABEL."
   (save-excursion
     (goto-char (point-min))
-    (let (cpont)
-      (while (progn (setq cpont (point))
-                    (re-search-forward ellit-org-start-regexp nil 'no-error))
-        (beginning-of-line)
+    (let ((done nil) cpont ellit-labels)
+      (while (and (not done)
+                  (setq cpont (point))
+                  (re-search-forward ellit-org-start-regexp nil 'no-error))
+        ;; Allow multiple labels delimited with ","
+        (setq ellit-labels (split-string (match-string 1) "," t "\s+"))
+        (forward-line)                  ;skip ;;; ellit-org:<ellit-label>
         (delete-region cpont (point))
 
-        ;; Scan line by line, stopping at non-commentary string
-        (while (looking-at ellit-org-comment-start-regexp)
-          (let ((del-point (match-end 0))
-                (eol-point (point-at-eol)))
-            ;; DO NOT strip "\n"
-            (when (> del-point eol-point)
-              (setq del-point eol-point))
-            (delete-region (point) del-point))
+        (when (or (not label) (member label ellit-labels))
+          ;; Scan line by line, stopping at non-commentary string
+          (while (looking-at ellit-org-comment-start-regexp)
+            (let ((del-point (match-end 0))
+                  (eol-point (point-at-eol)))
+              ;; DO NOT strip "\n"
+              (when (> del-point eol-point)
+                (setq del-point eol-point))
+              (delete-region (point) del-point))
 
-          (forward-line 1)
-          (beginning-of-line))
-        (delete-region (point-at-bol) (point-at-eol))
+            (forward-line 1)
+            (beginning-of-line))
+          (delete-region (point-at-bol) (point-at-eol))
 
-        ;; NOTE: Separent processing hunks with newline
-        (insert "\n"))
+          ;; NOTE: Separent processing hunks with newline
+          (insert "\n")
+          (when single-hunk-p
+            (setq done t))))
 
       (delete-region cpont (point-max))
 
@@ -238,11 +314,13 @@ Return list where first element is filename and rest are properties."
                                   value)
                     (prog1 (match-string 0 value)
                       (setq value (replace-match "" nil nil value)))))
+         (label (when (string-match ":label\s+\\(.*\\)" value)
+                  (match-string 1 value)))
          (no-load (when (string-match (regexp-quote ":no-load")
                                       value)
                     (setq value (replace-match "" nil nil value))
                     t)))
-    (list file :no-load no-load)))
+    (list file :no-load no-load :label label)))
 
 (defun ellit-org--process-org (&optional props)
   "Process all ELLIT-INCLUDE keywords in current org buffer.
@@ -272,6 +350,7 @@ PROPS are properties, such as: `:heading'."
   "Include ELLIT-FILE.
 PROPS is plist of properties, such as:
   `:heading' - To include only given heading
+  `:label'   - To include only given label from .el or .org file
   `:no-load' - Do not load .el ELLIT-FILE, loading is required to make
                macroses like {{{fundoc(xxx)}}} work."
   (let* ((ellit-dir (when ellit-org--filename
@@ -288,7 +367,7 @@ PROPS is plist of properties, such as:
                     (t
                      (error "Error loading \"%s\": %S"
                             ellit-org--filename err))))
-                (ellit-org--process-el))
+                (ellit-org--process-el (plist-get props :label)))
 
               (ellit-org--process-org props)
               (buffer-string)))))
@@ -312,7 +391,7 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
      "--" "" (downcase (org-link-display-format text))))))
 
 (defun ellit-org-toc (depth info)
-  "Build a table of contents for `ellit-org' backend. 
+  "Build a table of contents for `ellit-org' backend.
 DEPTH is an integer specifying the depth of the table.
 INFO is a plist used as a communication channel."
   (let ((toc-ents
@@ -335,7 +414,8 @@ INFO is a plist used as a communication channel."
   "Transcode KEYWORD element back into Org syntax.
 CONTENTS is nil.  INFO is ignored."
   (let ((key (org-element-property :key keyword)))
-    (if (equal key "TOC")
+    (if (and (plist-get info :with-ellit-toc)
+             (equal key "TOC"))
         (let ((case-fold-search t)
               (value (org-element-property :value keyword)))
           (when (string-match "\\<headlines\\>" value)
@@ -344,11 +424,30 @@ CONTENTS is nil.  INFO is ignored."
               (ellit-org-toc depth info))))
       (org-org-keyword keyword _contents info))))
 
+(defun ellit-org-export-headline (headline contents info)
+  "Transcode HEADLINE element back into Org syntax.
+In case `:ellit-github-cid' export option is used, then generate
+GitHub friendly `:CUSTOM_ID' property for this HEADLINE.
+CONTENTS is its contents, as a string or nil.  INFO is ignored."
+  (when (plist-get info :with-ellit-cid)
+    (org-element-put-property headline :pre-blank 0)
+    (setq contents (concat ":PROPERTIES:\n"
+                           ":CUSTOM_ID: "
+                           (ellit-org-toc--ref-github-style
+                            (org-element-interpret-data
+                             (org-element-property :title headline)))
+                           "\n"
+                           ":END:\n\n"
+                           contents)))
+  (org-org-headline headline contents info))
+
 (org-export-define-derived-backend 'ellit-org 'org
-  :translate-alist '((keyword . ellit-org-export-keyword)
+  :options-alist '((:with-ellit-toc nil "ellit-toc" t)
+                   (:with-ellit-cid nil "ellit-cid" t))
+  :translate-alist '((headline . ellit-org-export-headline)
+                     (keyword . ellit-org-export-keyword)
                      (export-snippet . ellit-org-export-snippet)))
 
-;;;
 ;;;###autoload
 (defun ellit-org-export (ellit-file output-org-file &rest props)
   "Export ELLIT-FILE to OUTPUT-ORG-FILE.
@@ -368,7 +467,9 @@ PROPS is following property list:
       (org-export-to-file 'ellit-org output-org-file))))
 
 (defun ellit-org--logo-image (&optional size debug-p)
-  "Generate logo for the `ellit-org'."
+  "Generate logo for the `ellit-org'.
+SIZE is logo size in pixels.
+DEBUG-P is debug purposes only."
   (unless size (setq size 256))
   (let* ((logo-svg (svg-create size size))
          (border-size (/ size 32))
@@ -408,7 +509,8 @@ PROPS is following property list:
                :ascent 'center)))
 
 (defun ellit-org--save-logo (file &optional size)
-  "Write ellit svg logo into FILE."
+  "Write ellit-org svg logo into FILE.
+SIZE is passed directly to `ellit-org--logo-image'."
   (let ((logo-image (ellit-org--logo-image size)))
     (write-region "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" nil
                   file nil 'quiet)
@@ -495,7 +597,7 @@ If FIRST-LINE-P is non-nil, then return only first line of the docstring."
 (defun ellit-org--fundoc (funname &optional first-line-p)
   "Return docstring for the function named by FUNNAME.
 If FIRST-LINE-P is non-nil, then return only first line of the docstring."
-  (let* ((funsym (intern funname))
+  (let* ((funsym (if (stringp funname) (intern funname) funname))
          (fundoc (documentation funsym t)))
     (when fundoc
       (let (case-fold-search)
@@ -528,6 +630,20 @@ If FIRST-LINE-P is non-nil, then return only first line of the docstring."
 (defun ellit-org-template-fundoc (function &optional indent-level)
   "Insert full docstring for the FUNCTION."
   (ellit--indented-docstring (ellit-org--fundoc function) indent-level))
+
+(defun ellit-org-pp-code-block (value &optional indent-level)
+  "Insert pretty-printed VALUE as code block."
+  (let ((indent-str (when indent-level
+                      (make-string indent-level ?\s)))
+        (pp-val (replace-regexp-in-string
+                 (rx (or (: string-start (* (any ?\r ?\n)))
+                         (: (* (any ?\r ?\n)) string-end)))
+                 "" (pp-to-string value))))
+    (if (string-match-p (regexp-quote "\n") pp-val)
+        (concat "\n" indent-str "#+begin_src emacs-lisp\n"
+                pp-val "\n"
+                indent-str "#+end_src\n")
+      (concat "~" pp-val "~"))))
 
 (provide 'ellit-org)
 

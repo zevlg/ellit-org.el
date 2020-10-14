@@ -1,5 +1,5 @@
 #+OPTIONS: timestamp:nil \n:t
-#+TITLE: [[ellit-org-logo64.png]] ellit-org (v0.1)
+#+TITLE: [[ellit-org-logo64.png]] ellit-org (v0.5)
 #+AUTHOR: Zajcev Evgeny
 #+startup: showall
 
@@ -18,10 +18,16 @@ Idea is similar to https://github.com/tumashu/el2org
 
 However ellit-org implements more features, such as:
 - Easy to use comments extractor from =.el=, see [[#commenting-el-files][Commenting files]]
-- Combining multiple files, =.org= or =.el=
+- [[#combining-multiple-files][Combining multiple files]], =.org= or =.el=
+- GitHub friendly ~:CUSTOM_ID~ property generation for headings, so
+  exporting html to GitHub Pages from resulting =.org= is easy as
+  calling ~org-html-export-to-html~ function
 - [[#templates][Templating]]
 
 * Why?
+:PROPERTIES:
+:CUSTOM_ID: why
+:END:
 
 Separate files for code and documentation is hard to get in sync.
 Once changing something in source code files, you might change
@@ -37,6 +43,9 @@ extracted from source code.  Such as:
 - etc
 
 * Using ellit-org in your project
+:PROPERTIES:
+:CUSTOM_ID: using-ellit-org-in-your-project
+:END:
 
 Sample Makefile to generate user manual for the project:
 
@@ -49,21 +58,27 @@ Sample Makefile to generate user manual for the project:
 #+end_src
 
 ** Projects that uses ellit-org
+:PROPERTIES:
+:CUSTOM_ID: projects-that-uses-ellit-org
+:END:
+
 - ellit-org itself, see [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
 - [[https://github.com/zevlg/telega.el][telega.el]], see its [[https://github.com/zevlg/telega.el/blob/master/doc/Makefile][Makefile]] to build documentation
 - [[https://github.com/zevlg/grammarbot.el][grammarbot.el]], see its [[https://github.com/zevlg/grammarbot.el/blob/master/Makefile][Makefile]]
 
 * Commenting .el files
+:PROPERTIES:
+:CUSTOM_ID: commenting-el-files
+:END:
 
-1. Use double-semicolon comments, otherwise processing won't start
-2. Processing starts when Org mode's property, heading or list is seen
-3. Processing starts only if matched comment line begins commentary
-   block, i.e. previous line is a non-commentary line
-4. Processing stops on any non-commentary line
-5. When processing stops, newline is emmited to output
+1. Use ~;;; ellit-org: [LABEL]~ as trigger for ellit-org to start
+   processing following comments
+2. Processing stops on any non-commentary line
+3. When processing stops, newline is emmited to output
 
 Here is the example:
 #+begin_src emacs-lisp
+  ;;; ellit-org:
   ;; * Heading1                        <--- processing starts here
   ;; This line is included into output
   ;;
@@ -71,8 +86,8 @@ Here is the example:
   				     <--- processing stops here
   ;; This line is NOT included into output
   ;; * This line also NOT included
-  ;;   Since it does not begin the commentary block, see 3.
 
+  ;;; ellit-org:
   ;; - However this line, is included  <--- processing starts here
   ;;
   ;;    Since new processing is started, and it will stop only on
@@ -81,7 +96,20 @@ Here is the example:
   ;; This line is *not* included
 #+end_src
 
+* Combining multiple files
+:PROPERTIES:
+:CUSTOM_ID: combining-multiple-files
+:END:
+
+Multiple =.org= and =.el= files might be combined forming final
+result as single =.org= file.
+
+*TODO*: write me
+
 * Templates
+:PROPERTIES:
+:CUSTOM_ID: templates
+:END:
 
 ellit-org relies on Org mode's macro system by adding some useful
 macroses.  See https://orgmode.org/manual/Macro-replacement.html
@@ -107,7 +135,7 @@ Supported templates:
 - as-is(~STRING~) :: 
      Insert ~STRING~ as is.
 
-     ~as-is(STRING)~ filter is equivalent to ~eval("STRING")~
+     ~as-is(STRING)~ filter is equivalent to ~eval("STRING", t)~
 
 - ellit-filename([ ~VERBATIM~ ]) :: 
      Insert currently processing filename.
