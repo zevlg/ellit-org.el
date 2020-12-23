@@ -7,8 +7,8 @@
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/zevlg/ellit-org.el
-;; Version: 0.5
-(defconst ellit-org-version "0.5")
+;; Version: 0.6
+(defconst ellit-org-version "0.6")
 
 ;; ellit-org is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -134,6 +134,12 @@
       (group (0+ not-newline))
       line-end)
   "Regexp matching start of the text to extract.")
+
+(defconst ellit-org--where-is-key-regexp
+  (rx (optional "`")
+      (optional "\\<" (group (1+ (not ">"))) ">")
+      "\\[" (group (1+ (not "]"))) "]" (optional "'"))
+  "Regexp to match command substitution.")
 
 ;;; ellit-org: templates
 ;; * Templates
@@ -410,7 +416,7 @@ INFO is a plist used as a communication channel."
                          (cadr toc-ent) (caddr toc-ent)))
                (cl-remove-if 'null toc-ents) "\n")))
 
-(defun ellit-org-export-keyword (keyword _contents info)
+(defun ellit-org-export-keyword (keyword contents info)
   "Transcode KEYWORD element back into Org syntax.
 CONTENTS is nil.  INFO is ignored."
   (let ((key (org-element-property :key keyword)))
@@ -422,7 +428,7 @@ CONTENTS is nil.  INFO is ignored."
             (let ((depth (and (string-match "\\<[0-9]+\\>" value)
                               (string-to-number (match-string 0 value)))))
               (ellit-org-toc depth info))))
-      (org-org-keyword keyword _contents info))))
+      (org-org-keyword keyword contents info))))
 
 (defun ellit-org-export-headline (headline contents info)
   "Transcode HEADLINE element back into Org syntax.
@@ -562,6 +568,15 @@ KEYMAP is keymap where to lookup for COMMAND.  By default
                                (string-to-number indent-level) ?\s)))
     docstring))
 
+(defun ellit-org--where-is-key-replace-func (cmdstr)
+  "Function to be used in `replace-regexp-in-string'."
+  ;; NOTE: Handles `\\<keymap>\\[command]' syntax
+  (let* ((keymap-str (match-string 1 cmdstr))
+         (keys (where-is-internal (intern (match-string 2 cmdstr))
+                                  (when keymap-str
+                                    (symbol-value (intern keymap-str))))))
+    (ellit-org-template-kbd (key-description (car keys)))))
+
 (defun ellit-org--vardoc (varname &optional first-line-p)
   "Return docstring for the variable named by VARNAME.
 If FIRST-LINE-P is non-nil, then return only first line of the docstring."
@@ -572,11 +587,17 @@ If FIRST-LINE-P is non-nil, then return only first line of the docstring."
       (replace-regexp-in-string
        (rx "`" (group (regexp "[^']+")) "'")
        "~\\1~"
-       (string-trim-left
-        (if first-line-p
-            (car (split-string vardoc "\n"))
-          vardoc)
-        (concat "^" (regexp-quote "*")))))))
+
+       ;; NOTE: Handle `\\<keymap>\\[command]' syntax
+       (replace-regexp-in-string
+        ellit-org--where-is-key-regexp
+        #'ellit-org--where-is-key-replace-func
+
+        (string-trim-left
+         (if first-line-p
+             (car (split-string vardoc "\n"))
+           vardoc)
+         (concat "^" (regexp-quote "*"))))))))
 
 (defun ellit-org-template-vardoc1 (variable)
   "Insert first line from docstring for the VARIABLE."
@@ -606,12 +627,10 @@ If FIRST-LINE-P is non-nil, then return only first line of the docstring."
          (rx "`" (group (regexp "[^']+")) "'")
          "~\\1~"
 
-         ;; NOTE: Handle `\\[command]' syntax
+         ;; NOTE: Handle `\\<keymap>\\[command]' syntax
          (replace-regexp-in-string
-          (rx (optional "`") "\\[" (group (1+ (not "]"))) "]" (optional "'"))
-          (lambda (cmdstr)
-            (let ((keys (where-is-internal (intern (match-string 1 cmdstr)))))
-              (ellit-org-template-kbd (key-description (car keys)))))
+          ellit-org--where-is-key-regexp
+          #'ellit-org--where-is-key-replace-func
 
           ;; NOTE: emphasize arguments refs in fundoc with ~...~
           ;; syntax
