@@ -1,5 +1,5 @@
 #+OPTIONS: timestamp:nil \n:t
-#+TITLE: [[ellit-org-logo64.png]] ellit-org (v0.6)
+#+TITLE: [[ellit-org-logo64.png]] ellit-org (v0.7)
 #+AUTHOR: Zajcev Evgeny
 #+startup: showall
 
@@ -104,7 +104,13 @@ Here is the example:
 Multiple =.org= and =.el= files might be combined forming final
 result as single =.org= file.
 
-*TODO*: write me
+*TODO*: Describe labels purpose inside ellit-driven files
+
+*TODO*: Describe ~#+ELLIT-INCLUDE:~ directive, and its properties:
+- ~:eval-p~ to get include filename by evaluating sexp
+- ~:no-load~ do not load corresponding =.el= file
+- ~:label~ To include only given label from =.el= or =.org= file
+- ~:heading~ To include only given heading
 
 * Templates
 :PROPERTIES:

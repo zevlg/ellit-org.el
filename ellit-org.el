@@ -7,8 +7,8 @@
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/zevlg/ellit-org.el
-;; Version: 0.6
-(defconst ellit-org-version "0.6")
+;; Version: 0.7
+(defconst ellit-org-version "0.7")
 
 ;; ellit-org is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -115,7 +115,13 @@
 ;; Multiple =.org= and =.el= files might be combined forming final
 ;; result as single =.org= file.
 ;;
-;; *TODO*: write me
+;; *TODO*: Describe labels purpose inside ellit-driven files
+;; 
+;; *TODO*: Describe ~#+ELLIT-INCLUDE:~ directive, and its properties:
+;;   - ~:eval-p~ to get include filename by evaluating sexp
+;;   - ~:no-load~ do not load corresponding =.el= file
+;;   - ~:label~ To include only given label from =.el= or =.org= file
+;;   - ~:heading~ To include only given heading
 
 
 ;;; Code:
@@ -316,6 +322,7 @@ hunk matching LABEL."
   "Parse arguments of #+ELLIT-INCLUDE keyword ELEMENT.
 Return list where first element is filename and rest are properties."
   (let* ((value (org-element-property :value element))
+         (eval-p (string-match (regexp-quote ":eval") value))
          (file (and (string-match (rx line-start (1+ (not space)))
                                   value)
                     (prog1 (match-string 0 value)
@@ -326,7 +333,7 @@ Return list where first element is filename and rest are properties."
                                       value)
                     (setq value (replace-match "" nil nil value))
                     t)))
-    (list file :no-load no-load :label label)))
+    (list file :no-load no-load :label label :eval-p eval-p)))
 
 (defun ellit-org--process-org (&optional props)
   "Process all ELLIT-INCLUDE keywords in current org buffer.
@@ -355,10 +362,19 @@ PROPS are properties, such as: `:heading'."
 (defun ellit-org--include (ellit-file &rest props)
   "Include ELLIT-FILE.
 PROPS is plist of properties, such as:
+  `:eval-p'  - Filename to include specifies sexp to evaluate to get a
+               filename.
   `:heading' - To include only given heading
   `:label'   - To include only given label from .el or .org file
   `:no-load' - Do not load .el ELLIT-FILE, loading is required to make
                macroses like {{{fundoc(xxx)}}} work."
+  (when (plist-get props :eval-p)
+    ;; NOTE: `ellit-file' specifies sexp form to evaluate to get real
+    ;; filename
+    (let ((real-ellit-file (eval (car (read-from-string ellit-file)))))
+      (message "Evaluating ellit-file: %s -> %S" ellit-file real-ellit-file)
+      (setq ellit-file real-ellit-file)))
+
   (let* ((ellit-dir (when ellit-org--filename
                       (file-name-directory ellit-org--filename)))
          (ellit-org--filename (expand-file-name ellit-file ellit-dir)))
