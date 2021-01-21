@@ -43,7 +43,7 @@
 ;;
 ;; Idea is similar to https://github.com/tumashu/el2org
 ;;
-;; However ellit-org implements more features, such as:
+;; However =ellit-org= implements more features, such as:
 ;; - Easy to use comments extractor from =.el=, see [[#commenting-el-files][Commenting files]]
 ;; - [[#combining-multiple-files][Combining multiple files]], =.org= or =.el=
 ;; - GitHub friendly ~:CUSTOM_ID~ property generation for headings, so
@@ -79,8 +79,8 @@
 ;; #+END_SRC
 ;;
 ;; ** Projects that uses ellit-org
-;;    - ellit-org itself, see [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
-;;    - [[https://github.com/zevlg/telega.el][telega.el]], see its [[https://github.com/zevlg/telega.el/blob/master/doc/Makefile][Makefile]] to build documentation
+;;    - =ellit-org= itself, see [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
+;;    - [[https://github.com/zevlg/telega.el][telega.el]] uses =ellit-org= to generate its [[https://zevlg.github.io/telega.el/][Manual]], see its [[https://github.com/zevlg/telega.el/blob/master/doc/Makefile][Makefile]]
 ;;    - [[https://github.com/zevlg/grammarbot.el][grammarbot.el]], see its [[https://github.com/zevlg/grammarbot.el/blob/master/Makefile][Makefile]]
 ;;
 ;; * Commenting .el files
