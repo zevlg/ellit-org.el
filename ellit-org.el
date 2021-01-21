@@ -7,8 +7,8 @@
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/zevlg/ellit-org.el
-;; Version: 0.7
-(defconst ellit-org-version "0.7")
+;; Version: 0.8
+(defconst ellit-org-version "0.8")
 
 ;; ellit-org is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -191,9 +191,9 @@
     ("kbd" . "(eval (ellit-org-template-kbd $1))")
 
     ;;; ellit-org: templates
-    ;; - where-is(~COMMAND~, ~KEYMAP~) ::
+    ;; - where-is(~COMMAND~ [, ~KEYMAP~ [, ~MENU-ITEMS~ ]]) ::
     ;;   {{{fundoc(ellit-org-template-where-is, 2)}}}
-    ("where-is" . "(eval (ellit-org-template-where-is $1 $2))")
+    ("where-is" . "(eval (ellit-org-template-where-is $1 $2 $3))")
 
     ;;; ellit-org: templates
     ;; - vardoc1(~VARIABLE~) ::
@@ -564,16 +564,20 @@ If VERBATIM is specified, then outline filename with verbatim markup."
   "Insert HTML <kbd> tag with KEY contents."
   (concat "@@html:<kbd>@@" key "@@html:</kbd>@@"))
 
-(defun ellit-org-template-where-is (command &optional keymap)
+(defun ellit-org-template-where-is (command &optional keymap menu-items-p)
   "Insert list of keys that calls COMMAND.
 KEYMAP is keymap where to lookup for COMMAND.  By default
-`global-map' is considered."
+`global-map' is considered.
+
+If MENU-ITEMS-P is specified, then also insert commands inside
+menu-items."
   ;; {{{kbd(C-c 1)}}}, {{{kbd(C-c 2)}}} (~command~)
   (let ((cmd-sym (intern command))
         (keymap-sym (intern keymap)))
     (concat (mapconcat (lambda (key)
                          (ellit-org-template-kbd (key-description key)))
-                       (where-is-internal cmd-sym (symbol-value keymap-sym))
+                       (where-is-internal cmd-sym (symbol-value keymap-sym)
+                                          nil (string-empty-p menu-items-p))
                        ", ")
             " (~" command "~)")))
 
