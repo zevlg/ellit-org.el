@@ -1,5 +1,5 @@
 #+OPTIONS: timestamp:nil \n:t
-#+TITLE: [[ellit-org-logo64.png]] ellit-org (v0.8)
+#+TITLE: [[ellit-org-logo64.png]] ellit-org (v0.9)
 #+AUTHOR: Zajcev Evgeny
 #+startup: showall
 
