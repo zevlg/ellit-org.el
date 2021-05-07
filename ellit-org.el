@@ -7,8 +7,8 @@
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/zevlg/ellit-org.el
-;; Version: 0.8
-(defconst ellit-org-version "0.8")
+;; Version: 0.9
+(defconst ellit-org-version "0.9")
 
 ;; ellit-org is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -145,8 +145,8 @@
 
 (defconst ellit-org--where-is-key-regexp
   (rx (optional "`")
-      (optional "\\<" (group (1+ (not ">"))) ">")
-      "\\[" (group (1+ (not "]"))) "]" (optional "'"))
+      (optional "\\<" (group (1+ (not (any ">")))) ">")
+      "\\[" (group (1+ (not (any "]")))) "]" (optional "'"))
   "Regexp to match command substitution.")
 
 ;;; ellit-org: templates
