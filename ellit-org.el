@@ -1,6 +1,6 @@
 ;;; ellit-org.el --- Emacs Lisp Literate programming tool  -*- lexical-binding:t -*-
 
-;; Copyright (C) 2020 by Zajcev Evgeny.
+;; Copyright (C) 2020-2021 by Zajcev Evgeny.
 
 ;; Author: Zajcev Evgeny <zevlg@yandex.ru>
 ;; Created: Wed Jan 22 10:35:15 2020
