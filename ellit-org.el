@@ -82,7 +82,7 @@
 ;;
 ;; ** Projects that uses ellit-org
 ;;    - =ellit-org= itself, see [[https://github.com/zevlg/ellit-org.el/blob/master/Makefile][Makefile]]
-;;    - [[https://github.com/zevlg/telega.el][telega.el]] uses =ellit-org= to generate its [[https://zevlg.github.io/telega.el/][Manual]], see its [[https://github.com/zevlg/telega.el/blob/master/doc/Makefile][Makefile]]
+;;    - [[https://github.com/zevlg/telega.el][telega.el]] uses =ellit-org= to generate its [[https://zevlg.github.io/telega.el/][Manual]], see its [[https://github.com/zevlg/telega.el/blob/master/docs/Makefile][Makefile]]
 ;;    - [[https://github.com/zevlg/grammarbot.el][grammarbot.el]], see its [[https://github.com/zevlg/grammarbot.el/blob/master/Makefile][Makefile]]
 ;;
 ;; * Commenting .el files
